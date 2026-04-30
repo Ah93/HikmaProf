@@ -1,0 +1,626 @@
+/* ============================================
+   TEMPLATE GALLERY — 8 Curated Templates
+   Decorations: solid bars, horizontal rules,
+   line grids only. Zero shapes.
+   ============================================ */
+
+/* ─── Section Wrapper ─── */
+#templateGallerySection {
+    margin: 2rem 0;
+    padding: 2rem 2rem 2.5rem;
+    background: #fafbff;
+    border-radius: 18px;
+    border: 1px solid #e8ecff;
+}
+
+#toggleTemplateGallery {
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(to right, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    margin-bottom: 2rem;
+    letter-spacing: 0.01em;
+}
+
+#toggleTemplateGallery:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* ─── Gallery Header ─── */
+.gallery-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.gallery-header h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e1b4b;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.025em;
+}
+
+.gallery-header p {
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+/* ─── Grid: 4 columns, responsive ─── */
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+/* ============================================
+   TEMPLATE CARD
+   ============================================ */
+.template-card {
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 3px 10px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid #f1f5f9;
+}
+
+.template-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.11);
+}
+
+.template-card.selected {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.13), 0 8px 20px rgba(99,102,241,0.1);
+}
+
+/* ============================================
+   SLIDE MOCKUP — base layout
+   ============================================ */
+.template-preview {
+    height: 158px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Full-size absolute layer for the slide content */
+.tp-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Decoration: a solid rectangle — never a shape */
+.tp-decoration {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    /* No background by default — each template sets it */
+}
+
+/* Thin accent rule above the title */
+.tp-eyebrow {
+    height: 2px;
+    width: 24px;
+    border-radius: 1px;
+    background: rgba(255,255,255,0.5);
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.tp-header {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    overflow: hidden;
+    padding-right: 4px; /* prevent text touching edge */
+}
+
+/* Title: hard-clamped, never overflows */
+.tp-title-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-width: 100%;
+    word-break: break-word;
+}
+
+.tp-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+    padding-right: 4px;
+}
+
+/* Fake content lines */
+.tp-line {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.25);
+    flex-shrink: 0;
+}
+.tp-line-1 { width: 76%; }
+.tp-line-2 { width: 60%; }
+.tp-line-3 { width: 44%; }
+
+/* ─── Card Info Strip ─── */
+.template-info {
+    padding: 0.75rem 0.9rem;
+    border-top: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+.template-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.template-description {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Selected Badge ─── */
+.template-selected-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #6366f1;
+    color: white;
+    padding: 0.22rem 0.55rem;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.5);
+    white-space: nowrap;
+}
+
+/* ============================================
+   8 TEMPLATE DESIGNS
+   Only: solid bars, horizontal rules, line grids.
+   No diagonal gradients with hard stops.
+   No clip-path. No border-radius shapes.
+   ============================================ */
+
+/* ── 1. MODERN ───────────────────────────────
+   Deep indigo, bold left bar + right bar + top/bottom rules + tint panel */
+.template-card[data-template-id="modern"] .template-preview {
+    background:
+        /* right bar */
+        linear-gradient(to left, rgba(165,180,252,0.45) 0px, rgba(165,180,252,0.45) 3px, transparent 3px),
+        /* top rule */
+        linear-gradient(to bottom, rgba(165,180,252,0.5) 0px, rgba(165,180,252,0.5) 6px, transparent 6px,
+            transparent calc(100% - 5px), rgba(99,102,241,0.55) calc(100% - 5px)),
+        /* left tint panel */
+        linear-gradient(to right, rgba(165,180,252,0.12) 0px, rgba(165,180,252,0.12) 38px, transparent 38px),
+        /* base */
+        linear-gradient(to bottom, #2e1a82, #4338ca);
+}
+.template-card[data-template-id="modern"] .tp-decoration {
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: #a5b4fc;
+    box-shadow: 2px 0 0 rgba(165,180,252,0.3);
+}
+.template-card[data-template-id="modern"] .tp-slide {
+    padding-left: 22px;
+}
+.template-card[data-template-id="modern"] .tp-eyebrow {
+    background: #a5b4fc;
+    width: 22px;
+}
+.template-card[data-template-id="modern"] .tp-line {
+    background: rgba(165,180,252,0.38);
+}
+
+/* ── 2. MINIMAL ──────────────────────────────
+   Pure white, top+bottom rules, left corner accent, right thin rule */
+.template-card[data-template-id="minimal"] .template-preview {
+    background:
+        /* right thin rule */
+        linear-gradient(to left, rgba(15,23,42,0.1) 0px, rgba(15,23,42,0.1) 2px, transparent 2px),
+        /* bottom rule */
+        linear-gradient(to top, rgba(15,23,42,0.15) 0px, rgba(15,23,42,0.15) 3px, transparent 3px),
+        #ffffff;
+}
+.template-card[data-template-id="minimal"] .tp-decoration {
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: #0f172a;
+    box-shadow: 0 18px 0 rgba(15,23,42,0.06); /* sub-header shadow rule */
+}
+.template-card[data-template-id="minimal"] .tp-slide {
+    padding-top: 18px;
+}
+.template-card[data-template-id="minimal"] .tp-eyebrow {
+    background: rgba(15,23,42,0.2);
+    height: 1px;
+    width: 18px;
+}
+.template-card[data-template-id="minimal"] .tp-title-text {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-shadow: none;
+}
+.template-card[data-template-id="minimal"] .tp-line {
+    background: #dde3ec;
+    height: 3px;
+}
+
+/* ── 3. TECH ─────────────────────────────────
+   Near-black, green grid + left bar + bottom status + right indicators */
+.template-card[data-template-id="tech"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, rgba(34,197,94,0.85) 0px, rgba(34,197,94,0.85) 4px, transparent 4px),
+        /* bottom status bar */
+        linear-gradient(to top, rgba(34,197,94,0.45) 0px, rgba(34,197,94,0.45) 7px, transparent 7px),
+        #030712;
+}
+.template-card[data-template-id="tech"] .tp-decoration {
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(34,197,94,0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,0.12) 1px, transparent 1px);
+    background-size: 15px 15px;
+    /* Right edge stacked indicator blocks via box-shadow */
+    box-shadow:
+        inset -6px -16px 0 -4px rgba(34,197,94,0.45),
+        inset -6px -28px 0 -4px rgba(34,197,94,0.35),
+        inset -6px -40px 0 -4px rgba(34,197,94,0.25);
+}
+.template-card[data-template-id="tech"] .tp-slide {
+    padding-left: 22px;
+}
+.template-card[data-template-id="tech"] .tp-eyebrow {
+    background: #22c55e;
+    height: 2px;
+    width: 16px;
+}
+.template-card[data-template-id="tech"] .tp-title-text {
+    color: #22c55e;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(34,197,94,0.4);
+}
+.template-card[data-template-id="tech"] .tp-line {
+    background: rgba(34,197,94,0.28);
+    height: 3px;
+}
+
+/* ── 4. CREATIVE ─────────────────────────────
+   Rose-orange, top block + right column + left sub-bar + bottom rule */
+.template-card[data-template-id="creative"] .template-preview {
+    background:
+        /* top color block */
+        linear-gradient(to bottom, rgba(225,29,72,0.75) 0px, rgba(225,29,72,0.75) 32px, transparent 32px),
+        /* bottom accent bar */
+        linear-gradient(to top, rgba(249,115,22,0.65) 0px, rgba(249,115,22,0.65) 6px, transparent 6px),
+        /* left sub-bar */
+        linear-gradient(to right, rgba(255,255,255,0.22) 0px, rgba(255,255,255,0.22) 8px, transparent 8px),
+        /* base */
+        linear-gradient(to bottom, #e11d48, #f97316);
+}
+.template-card[data-template-id="creative"] .tp-decoration {
+    right: 0; top: 0; bottom: 0;
+    width: 16px;
+    background: rgba(255,255,255,0.15);
+    border-left: 2px solid rgba(255,255,255,0.35);
+    box-shadow:
+        inset 0 -48px 0 -12px rgba(255,255,255,0.18),
+        inset 0 -80px 0 -12px rgba(255,255,255,0.12);
+}
+.template-card[data-template-id="creative"] .tp-slide {
+    padding-top: 40px;
+}
+.template-card[data-template-id="creative"] .tp-eyebrow {
+    display: none;
+}
+.template-card[data-template-id="creative"] .tp-title-text {
+    font-size: 14px;
+    font-weight: 800;
+}
+.template-card[data-template-id="creative"] .tp-line {
+    background: rgba(255,255,255,0.42);
+    height: 5px;
+    border-radius: 3px;
+}
+
+/* ── 5. CORPORATE ────────────────────────────
+   Dark navy + left bar + top rule + right tint + bottom panel */
+.template-card[data-template-id="corporate"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, #2563eb 0px, #2563eb 5px, transparent 5px),
+        /* top rule */
+        linear-gradient(to bottom, #2563eb 0px, #2563eb 6px, transparent 6px),
+        /* right panel tint */
+        linear-gradient(to left, rgba(37,99,235,0.12) 0px, rgba(37,99,235,0.12) 30%, transparent 30%),
+        #0c1628;
+}
+.template-card[data-template-id="corporate"] .tp-decoration {
+    left: 0; right: 0; bottom: 0;
+    height: 36%;
+    background: #172036;
+    border-top: 2px solid #2563eb;
+    box-shadow: inset 0 0 0 0 transparent, -3px 0 0 0 rgba(37,99,235,0.4) inset;
+}
+.template-card[data-template-id="corporate"] .tp-slide {
+    padding-left: 20px;
+    padding-top: 20px;
+}
+.template-card[data-template-id="corporate"] .tp-eyebrow {
+    background: #2563eb;
+    height: 2px;
+    width: 20px;
+}
+.template-card[data-template-id="corporate"] .tp-line {
+    background: rgba(100,116,139,0.38);
+}
+
+/* ── 6. ELEGANT ──────────────────────────────
+   Near-black, double gold border frame + corner ornaments */
+.template-card[data-template-id="elegant"] .template-preview {
+    background:
+        /* top gold rule */
+        linear-gradient(to bottom, rgba(212,175,55,0.6) 0px, rgba(212,175,55,0.6) 2px, transparent 2px),
+        /* bottom gold rule */
+        linear-gradient(to top, rgba(212,175,55,0.35) 0px, rgba(212,175,55,0.35) 2px, transparent 2px),
+        /* warm inner tint */
+        rgba(255,248,220,0.06),
+        #14110f;
+}
+.template-card[data-template-id="elegant"] .tp-decoration {
+    left: 10px; right: 10px; top: 8px; bottom: 8px;
+    border: 1px solid rgba(212,175,55,0.45);
+    /* Second inner border via box-shadow */
+    box-shadow:
+        inset 0 0 0 3px rgba(20,17,15,1), /* gap */
+        inset 0 0 0 4px rgba(212,175,55,0.2); /* second inner border */
+}
+.template-card[data-template-id="elegant"] .tp-slide {
+    padding: 26px 22px 20px;
+}
+.template-card[data-template-id="elegant"] .tp-eyebrow {
+    background: rgba(212,175,55,0.55);
+    height: 1px;
+    width: 28px;
+    border-radius: 0;
+}
+.template-card[data-template-id="elegant"] .tp-title-text {
+    color: #fde68a;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-shadow: none;
+}
+.template-card[data-template-id="elegant"] .tp-line {
+    background: rgba(212,175,55,0.22);
+    height: 3px;
+}
+
+/* ── 7. STARTUP ──────────────────────────────
+   Orange→pink, left bar + dual bottom bands + right energy meter */
+.template-card[data-template-id="startup"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 5px, transparent 5px),
+        /* top rule */
+        linear-gradient(to bottom, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 5px, transparent 5px),
+        /* base */
+        linear-gradient(to bottom, #f97316, #db2777);
+}
+.template-card[data-template-id="startup"] .tp-decoration {
+    left: 0; right: 0; bottom: 0;
+    height: 12px;
+    background: rgba(255,255,255,0.18);
+    border-top: 2px solid rgba(255,255,255,0.35);
+    /* Right energy meter bars via box-shadow */
+    box-shadow:
+        inset -6px 0 0 -2px rgba(255,255,255,0.4),
+        inset -14px 0 0 -2px rgba(255,255,255,0.3),
+        inset -22px 0 0 -2px rgba(255,255,255,0.22),
+        inset -30px 0 0 -2px rgba(255,255,255,0.14);
+}
+.template-card[data-template-id="startup"] .tp-slide {
+    padding-left: 22px;
+}
+.template-card[data-template-id="startup"] .tp-eyebrow {
+    background: rgba(255,255,255,0.8);
+    height: 2px;
+    width: 22px;
+}
+.template-card[data-template-id="startup"] .tp-title-text {
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+.template-card[data-template-id="startup"] .tp-line {
+    background: rgba(255,255,255,0.42);
+    height: 5px;
+    border-radius: 3px;
+}
+
+/* ── 8. MAGAZINE ─────────────────────────────
+   Near-black, red bars (top/bottom/left/right) + editorial column */
+.template-card[data-template-id="magazine"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, #ef4444 0px, #ef4444 4px, transparent 4px),
+        /* right accent bar */
+        linear-gradient(to left, rgba(239,68,68,0.55) 0px, rgba(239,68,68,0.55) 4px, transparent 4px),
+        /* bottom rule */
+        linear-gradient(to top, #ef4444 0px, #ef4444 4px, transparent 4px),
+        /* editorial column */
+        linear-gradient(to right, transparent 38%, rgba(239,68,68,0.15) 38%, rgba(239,68,68,0.15) calc(38% + 1px), transparent calc(38% + 1px)),
+        #0a0a0a;
+}
+.template-card[data-template-id="magazine"] .tp-decoration {
+    left: 0; right: 0; top: 0;
+    height: 5px;
+    background: #ef4444;
+    box-shadow: 0 6px 0 rgba(239,68,68,0.2); /* inner sub-rule */
+}
+.template-card[data-template-id="magazine"] .tp-slide {
+    padding: 18px 18px 12px 20px;
+}
+.template-card[data-template-id="magazine"] .tp-eyebrow {
+    background: #ef4444;
+    height: 2px;
+    width: 14px;
+    border-radius: 0;
+}
+.template-card[data-template-id="magazine"] .tp-title-text {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+}
+.template-card[data-template-id="magazine"] .tp-line {
+    background: rgba(255,255,255,0.16);
+    height: 3px;
+}
+
+/* ============================================
+   COLOR GALLERY
+   ============================================ */
+#colorGallery {
+    margin-top: 0.5rem;
+}
+
+.color-category {
+    margin-bottom: 1.75rem;
+}
+
+.color-category-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.65rem;
+}
+
+.color-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.color-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(0,0,0,0.11);
+}
+
+.color-card.selected {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.14);
+}
+
+.color-preview {
+    height: 52px;
+    width: 100%;
+}
+
+.color-name {
+    padding: 0.4rem 0.55rem;
+    text-align: center;
+    font-size: 0.68rem;
+    color: #475569;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.color-selected-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #6366f1;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    box-shadow: 0 2px 5px rgba(99,102,241,0.45);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+    .template-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    #templateGallerySection {
+        padding: 1.25rem;
+    }
+
+    .template-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .color-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+}

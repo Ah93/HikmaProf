@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIKMAProf</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/template-gallery.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-brand">
+                <a href="/" class="logo">
+                    <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" class="header-logo-img" style="height: 80px; width: auto;">
+                </a>
+            </div>
+            <p class="subtitle">AI Presentation Generator</p>
+            <a href="/" class="header-home-btn">← Home</a>
+        </header>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="card upload-section" id="uploadSection">
+                <h2>Create Your Presentation</h2>
+                <p class="description">Choose your workflow and generate professional presentations</p>
+
+                <!-- Dynamic mode heading -->
+                <div id="modeHeadingBanner" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%); border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; text-align: center;">
+                    <h3 id="modeHeadingTitle" style="margin: 0 0 0.4rem 0; font-size: 1.4rem; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">Transform Your Research into Engaging Course Slides</h3>
+                    <p id="modeHeadingSubtitle" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); font-weight: 400;">Upload a few pages of insights — get a complete, professionally structured presentation ready to teach</p>
+                </div>
+
+                <!-- Mode Selection -->
+                <div class="mode-selection">
+                    <label class="mode-label">Select Generation Mode:</label>
+                    <div class="mode-options">
+                        <label class="mode-option">
+                            <input type="radio" name="generationMode" value="pdf-to-ppt" id="modePdfToPpt" checked>
+                            <div class="mode-card">
+                                <div class="mode-icon">📄→📊</div>
+                                <div class="mode-title">PDF to PowerPoint</div>
+                                <div class="mode-desc">Convert PDF to PPTX only</div>
+                            </div>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="generationMode" value="ppt-to-video" id="modePptToVideo">
+                            <div class="mode-card">
+                                <div class="mode-icon">📊→🎥</div>
+                                <div class="mode-title">PowerPoint to Video</div>
+                                <div class="mode-desc">Convert PPTX + transcript to video</div>
+                            </div>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="generationMode" value="pdf-to-both" id="modePdfToBoth">
+                            <div class="mode-card">
+                                <div class="mode-icon">📄→📊→🎥</div>
+                                <div class="mode-title">Complete Package</div>
+                                <div class="mode-desc">PDF to Presentation & Video</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <!-- PDF Upload (for PDF to PPT modes) -->
+                    <div class="file-upload-wrapper" id="pdfUploadSection">
+                        <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.tex">
+                        <label for="fileInput" class="file-upload-label">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <span class="file-upload-text">Click to browse or drag and drop</span>
+                            <span class="file-name"></span>
+                        </label>
+                    </div>
+
+                    <!-- PPT + Transcript Upload (for PPT to Video mode) -->
+                    <div id="pptUploadSection" style="display: none;">
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="pptFileInput" name="ppt_file" accept=".ppt,.pptx">
+                            <label for="pptFileInput" class="file-upload-label">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <span class="file-upload-text">Upload PowerPoint (PPTX)</span>
+                                <span class="file-name" id="pptFileName"></span>
+                            </label>
+                        </div>
+
+                        <div class="file-upload-wrapper" style="margin-top: 1rem;">
+                            <input type="file" id="transcriptFileInput" name="transcript_file" accept=".txt,.md">
+                            <label for="transcriptFileInput" class="file-upload-label">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                </svg>
+                                <span class="file-upload-text">Upload Transcript (TXT)</span>
+                                <span class="file-name" id="transcriptFileName"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="outputName">Presentation Name (optional)</label>
+                        <input type="text" id="outputName" name="output_name" placeholder="my-presentation">
+                    </div>
+
+                    <!-- Selected Template Display -->
+                    <div class="ppt-generation-only selected-template-display" id="selectedTemplateDisplay">
+                        <div class="selected-summary">
+                            <span class="selected-label">Selected:</span>
+                            <span class="selected-template-name" id="selectedTemplateName">Modern</span>
+                            <span class="selected-divider">•</span>
+                            <span class="selected-color-name" id="selectedColorName">Professional Blue</span>
+                            <button type="button" id="changeTemplateBtn" class="change-template-btn">Change</button>
+                        </div>
+                    </div>
+
+                    <!-- Template Gallery Section -->
+                    <div class="ppt-generation-only" id="templateGallerySection" style="display: none;">
+                        <div id="templateGalleryContent">
+                            <div class="gallery-header">
+                                <h2>Choose Your Template & Color</h2>
+                                <p>Select from 24 professionally designed templates and 27 color schemes</p>
+                            </div>
+                            <div id="templateGallery"></div>
+                            <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #2c3e50;">Select Color Scheme</h3>
+                            <div id="colorGallery"></div>
+                            <button type="button" id="confirmTemplateBtn" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%;">
+                                ✓ Confirm Selection
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden inputs for selection -->
+                    <input type="hidden" id="templateStyle" name="template_style" value="modern">
+                    <input type="hidden" id="colorScheme" name="color_scheme" value="blue">
+
+                    <!-- Legacy dropdown (hidden) -->
+                    <div class="form-group ppt-generation-only" style="display: none;">
+                        <label for="templateStyleLegacy">Template Style</label>
+                        <select id="templateStyleLegacy" name="template_style_legacy">
+                            <option value="modern" selected>Modern - Clean, contemporary design with gradients</option>
+                            <option value="corporate">Corporate - Professional business style</option>
+                            <option value="creative">Creative - Bold and colorful with dynamic shapes</option>
+                            <option value="minimal">Minimal - Simple and elegant</option>
+                            <option value="academic">Academic - Serif fonts, formal research style</option>
+                            <option value="tech">Tech - Monospace headers, modern developer aesthetic</option>
+                            <option value="startup">Startup - Bold, vibrant, energetic style</option>
+                            <option value="medical">Medical - Calm blues, professional healthcare</option>
+                            <option value="elegant">Elegant - Sophisticated serif, premium feel</option>
+                            <option value="nature">Nature - Organic greens, earth tones</option>
+                            <option value="retro">Retro - Vintage fonts, warm colors, nostalgic 80s/90s style</option>
+                            <option value="luxury">Luxury - Premium fonts, metallic accents, high-end fashion style</option>
+                            <option value="industrial">Industrial - Bold sans-serif, metallic grays, manufacturing style</option>
+                            <option value="festival">Festival - Playful fonts, rainbow colors, celebration style</option>
+                        </select>
+                    </div>
+
+                    <!-- Legacy color dropdown (hidden) -->
+                    <div class="form-group ppt-generation-only" style="display: none;">
+                        <label for="colorSchemeLegacy">Color Scheme</label>
+                        <select id="colorSchemeLegacy" name="color_scheme_legacy">
+                            <option value="blue" selected>Professional Blue</option>
+                            <option value="teal">Modern Teal</option>
+                            <option value="purple">Creative Purple</option>
+                            <option value="orange">Energetic Orange</option>
+                            <option value="green">Nature Green</option>
+                            <option value="red">Bold Red</option>
+                            <option value="slate">Professional Slate</option>
+                            <option value="navy">Corporate Navy</option>
+                            <option value="emerald">Elegant Emerald</option>
+                            <option value="dark">Dark Mode</option>
+                            <option value="dark-orange">Dark Orange (Professional)</option>
+                            <option value="dark-teal">Dark Teal</option>
+                            <option value="dark-purple">Dark Purple</option>
+                            <option value="dark-emerald">Dark Emerald</option>
+                            <option value="dark-red">Dark Red</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group video-generation-only" style="display: none;">
+                        <label>Avatar for Video</label>
+                        <p class="form-hint">Select an avatar for video generation</p>
+                        <div class="avatar-gallery">
+                            <div class="avatar-option" data-avatar="">
+                                <div class="avatar-thumbnail no-avatar">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </div>
+                                <span class="avatar-label">No Video</span>
+                            </div>
+                            <div class="avatar-option" data-avatar="avatar_woman.png">
+                                <div class="avatar-thumbnail">
+                                    <img src="/api/avatars/avatar_woman.png" alt="Woman Avatar">
+                                </div>
+                                <span class="avatar-label">Woman</span>
+                            </div>
+                            <div class="avatar-option" data-avatar="avatar_man.jpg">
+                                <div class="avatar-thumbnail">
+                                    <img src="/api/avatars/avatar_man.jpg" alt="Man Avatar">
+                                </div>
+                                <span class="avatar-label">Man</span>
+                            </div>
+                            <div class="avatar-option" data-avatar="avatar_art1.png">
+                                <div class="avatar-thumbnail">
+                                    <img src="/api/avatars/avatar_art1.png" alt="Art Avatar">
+                                </div>
+                                <span class="avatar-label">Artistic</span>
+                            </div>
+                            <div class="avatar-option" data-avatar="avatar_business.png">
+                                <div class="avatar-thumbnail">
+                                    <img src="/api/avatars/avatar_business.png" alt="Business Avatar">
+                                </div>
+                                <span class="avatar-label">Business</span>
+                            </div>
+                            <div class="avatar-option" data-avatar="avatar_portrait.png">
+                                <div class="avatar-thumbnail">
+                                    <img src="/api/avatars/avatar_portrait.png" alt="Portrait Avatar">
+                                </div>
+                                <span class="avatar-label">Portrait</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="avatarChoice" name="avatar_choice" value="">
+                    </div>
+
+                    <div class="form-group video-generation-only" style="display: none;">
+                        <label for="voiceChoice">Voice Model for Video</label>
+                        <p class="form-hint">Select a voice model for narration</p>
+                        <div class="voice-selector">
+                            <select id="voiceChoice" name="voice_choice">
+                                <option value="gtts" selected>Google TTS (Default - Fast)</option>
+                                <option value="edge-tts">Microsoft Edge TTS (High Quality, Multiple Voices)</option>
+                                <option value="tts_models/en/ljspeech/tacotron2-DDC">LJSpeech Tacotron2 (Female)</option>
+                                <option value="tts_models/en/vctk/vits">VCTK VITS (Multiple Speakers)</option>
+                                <option value="tts_models/multilingual/multi-dataset/xtts_v2">XTTS v2 (Multilingual)</option>
+                            </select>
+                            <button type="button" class="btn-preview" id="voicePreviewBtn" title="Preview this voice">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group video-generation-only" id="speakerSelectGroup" style="display: none;">
+                        <label for="speakerChoice">Select Voice/Speaker</label>
+                        <p class="form-hint">Choose a specific voice or speaker</p>
+                        <select id="speakerChoice" name="speaker_choice">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <div id="voicePreviewArea" style="margin-top: 0.5rem;">
+                        <audio id="voicePreviewAudio" style="display: none;"></audio>
+                        <div id="voicePreviewStatus" class="preview-status"></div>
+                    </div>
+
+                    <div class="form-group video-generation-only" style="display: none;">
+                        <label for="avatarPosition">Avatar Position</label>
+                        <select id="avatarPosition" name="avatar_position">
+                            <option value="bottom-right" selected>Bottom Right</option>
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="top-right">Top Right</option>
+                            <option value="top-left">Top Left</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="skipValidation" name="skip_validation" checked>
+                            <span>Skip validation (faster generation)</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="generateBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                        Generate Presentation
+                    </button>
+                </form>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card preview-section hidden" id="previewSection">
+                <h2>Review Your Slides</h2>
+                <p class="subtitle">Review the content before generating the final presentation</p>
+
+                <div class="preview-toolbar" id="previewToolbar">
+                    <button class="btn btn-secondary" id="saveEditsBtn">Save Edits</button>
+                    <span class="preview-save-status" id="previewSaveStatus"></span>
+                </div>
+
+                <div class="preview-container" id="previewContainer">
+                    <!-- Slides will be dynamically inserted here -->
+                </div>
+
+                <div class="preview-actions">
+                    <button class="btn btn-primary" id="approveBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        Generate PowerPoint (Fast)
+                    </button>
+                    <button class="btn btn-success" id="finalBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                        Generate Final (With Auto-Fix)
+                    </button>
+                    <button class="btn btn-secondary" id="regenerateBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        Start Over
+                    </button>
+                </div>
+                <p class="preview-note">You can edit slide titles, bullets, layouts, and speaker notes below. "Fast" skips validation. "Final" runs validation + auto-fix (requires LibreOffice + pdftoppm). Slide previews are generated automatically.</p>
+            </div>
+
+            <!-- Processing Section -->
+            <div class="card processing-section hidden" id="processingSection">
+                <h2>Generating Your Presentation</h2>
+                <div class="progress-container">
+                    <div class="spinner"></div>
+                    <p class="status-text" id="statusText">Uploading document...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-percent" id="progressPercent">0%</p>
+                </div>
+                <div class="processing-steps">
+                    <div class="step" id="step1">
+                        <div class="step-icon">1</div>
+                        <div class="step-content">
+                            <h4>Parsing Document</h4>
+                            <p>Extracting content and structure</p>
+                        </div>
+                    </div>
+                    <div class="step" id="step2">
+                        <div class="step-icon">2</div>
+                        <div class="step-content">
+                            <h4>AI Analysis</h4>
+                            <p>Claude AI planning optimal slides</p>
+                        </div>
+                    </div>
+                    <div class="step" id="step3">
+                        <div class="step-icon">3</div>
+                        <div class="step-content">
+                            <h4>Generating PowerPoint</h4>
+                            <p>Creating professional slides</p>
+                        </div>
+                    </div>
+                    <div class="step video-step" id="step4" style="display: none;">
+                        <div class="step-icon">4</div>
+                        <div class="step-content">
+                            <h4>Converting to Images</h4>
+                            <p>Preparing slides for video</p>
+                        </div>
+                    </div>
+                    <div class="step video-step" id="step5" style="display: none;">
+                        <div class="step-icon">5</div>
+                        <div class="step-content">
+                            <h4>Generating Audio</h4>
+                            <p>Creating voice narration</p>
+                        </div>
+                    </div>
+                    <div class="step video-step" id="step6" style="display: none;">
+                        <div class="step-icon">6</div>
+                        <div class="step-content">
+                            <h4>Animating Avatar</h4>
+                            <p>Syncing avatar with audio</p>
+                        </div>
+                    </div>
+                    <div class="step video-step" id="step7" style="display: none;">
+                        <div class="step-icon">7</div>
+                        <div class="step-content">
+                            <h4>Composing Video</h4>
+                            <p>Combining slides and avatar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="card result-section hidden" id="resultSection">
+                <div class="success-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h2>Presentation Ready!</h2>
+                <p class="result-filename" id="resultFilename"></p>
+
+                <div class="result-metadata" id="resultMetadata"></div>
+
+                <div class="result-previews" id="resultPreviews">
+                    <div class="previews-header">
+                        <h3>Slide Preview</h3>
+                        <button class="btn btn-secondary" id="togglePreviewsBtn" type="button">Show</button>
+                    </div>
+                    <p class="previews-hint" id="previewsHint">Instant mock previews are generated from the slide plan (not exact PowerPoint rendering).</p>
+                    <div class="previews-body hidden" id="previewsBody">
+                        <div class="previews-actions">
+                            <span class="previews-status" id="previewsStatus"></span>
+                        </div>
+                        <div class="previews-grid" id="previewsGrid"></div>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <a href="#" class="btn btn-success" id="downloadBtn" download>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download as PPT/PPTX
+                    </a>
+                    <a href="#" class="btn btn-secondary" id="downloadPdfBtn" download>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="8" y1="13" x2="16" y2="13"/>
+                            <line x1="8" y1="17" x2="16" y2="17"/>
+                        </svg>
+                        Download as PDF
+                    </a>
+                    <a href="#" class="btn btn-secondary" id="downloadTranscriptBtn" download>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="8" y1="13" x2="16" y2="13"/>
+                            <line x1="8" y1="17" x2="16" y2="17"/>
+                        </svg>
+                        Download Transcript (TXT)
+                    </a>
+                    <a href="#" class="btn btn-success hidden" id="downloadVideoBtn" download>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 7l-7 5 7 5V7z"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        Download Video (MP4)
+                    </a>
+                    <button class="btn btn-secondary" id="newPresentationBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        Create Another
+                    </button>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div class="card error-section hidden" id="errorSection">
+                <div class="error-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                </div>
+                <h2>Generation Failed</h2>
+                <p class="error-message" id="errorMessage"></p>
+                <button class="btn btn-secondary" id="retryBtn">Try Again</button>
+            </div>
+
+            <!-- Avatar Positioning Section -->
+            <div class="card avatar-positioning-section hidden" id="avatarPositioningSection">
+                <h2>Position Avatar on Slides</h2>
+                <p class="section-hint">Drag the avatar preview to position it on each slide. Changes apply to all slides or customize individually.</p>
+
+                <div class="positioning-controls">
+                    <div class="slide-navigation">
+                        <button class="btn btn-icon" id="prevSlideBtn" title="Previous slide">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <span class="slide-counter" id="slideCounter">Slide 1 / 10</span>
+                        <button class="btn btn-icon" id="nextSlideBtn" title="Next slide">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="position-presets">
+                        <label>Quick Position:</label>
+                        <button class="btn btn-secondary btn-sm" data-position="bottom-right">Bottom Right</button>
+                        <button class="btn btn-secondary btn-sm" data-position="bottom-left">Bottom Left</button>
+                        <button class="btn btn-secondary btn-sm" data-position="top-right">Top Right</button>
+                        <button class="btn btn-secondary btn-sm" data-position="top-left">Top Left</button>
+                    </div>
+
+                    <div class="apply-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="applyToAllSlides" checked>
+                            <span>Apply to all slides</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="slide-preview-container" id="slidePreviewContainer">
+                    <div class="slide-canvas" id="slideCanvas">
+                        <img src="" alt="Slide preview" id="currentSlideImage" class="slide-image">
+                        <div class="avatar-preview" id="avatarPreview" style="position: absolute; bottom: 10%; right: 5%; width: 20%; cursor: move;">
+                            <img src="" alt="Avatar preview" id="avatarPreviewImage" style="width: 100%; border: 2px dashed #3b82f6; border-radius: 8px;">
+                            <div class="position-label">Drag to position</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="positioning-actions">
+                    <button class="btn btn-secondary" id="resetPositionBtn">Reset to Default</button>
+                    <button class="btn btn-primary" id="confirmPositionsBtn">Continue Video Generation</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Jobs Section -->
+        <div class="card recent-jobs-section" id="recentJobsSection">
+            <h3>Recent Presentations</h3>
+            <div id="jobsList" class="jobs-list">
+                <p class="no-jobs">No presentations generated yet</p>
+            </div>
+        </div>
+
+        <footer>
+        </footer>
+    </div>
+
+    <div class="preview-modal hidden" id="previewModal" aria-hidden="true">
+        <div class="preview-modal-backdrop" id="previewModalBackdrop"></div>
+        <div class="preview-modal-dialog" role="dialog" aria-modal="true" aria-label="Slide preview">
+            <button class="preview-modal-close" id="previewModalClose" type="button" aria-label="Close preview">×</button>
+            <div class="preview-modal-toolbar">
+                <div class="preview-modal-title" id="previewModalTitle">Slide Preview</div>
+                <div class="preview-modal-counter" id="previewModalCounter"></div>
+            </div>
+            <div class="preview-modal-content">
+                <button class="preview-modal-nav" id="previewModalPrev" type="button" aria-label="Previous slide">‹</button>
+                <div class="preview-modal-imagewrap">
+                    <img id="previewModalImage" alt="Slide preview" />
+                </div>
+                <button class="preview-modal-nav" id="previewModalNext" type="button" aria-label="Next slide">›</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/template-gallery.js') }}?v=1"></script>
+    <script>
+        // Mode heading content
+        const modeHeadings = {
+            'pdf-to-ppt': {
+                title: 'Transform Your Research into Engaging Course Slides',
+                subtitle: 'Upload a few pages of insights — get a complete, professionally structured presentation ready to teach'
+            },
+            'ppt-to-video': {
+                title: 'Bring Your Slides to Life with AI Narration',
+                subtitle: 'Upload your PowerPoint and transcript to generate a fully narrated video lecture'
+            },
+            'pdf-to-both': {
+                title: 'From Raw Insights to a Full Video Lecture — in One Click',
+                subtitle: 'Turn your documents into a polished presentation and narrated video, ready to share with students'
+            }
+        };
+
+        function updateModeHeading(mode) {
+            const h = modeHeadings[mode];
+            if (h) {
+                document.getElementById('modeHeadingTitle').textContent = h.title;
+                document.getElementById('modeHeadingSubtitle').textContent = h.subtitle;
+            }
+        }
+
+        // Show template gallery section when in PDF to PPT mode
+        document.querySelectorAll('input[name="generationMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const gallery = document.getElementById('templateGallerySection');
+                if (e.target.value === 'pdf-to-ppt' || e.target.value === 'pdf-to-both') {
+                    gallery.style.display = 'block';
+                } else {
+                    gallery.style.display = 'none';
+                }
+                updateModeHeading(e.target.value);
+            });
+        });
+
+        // Toggle gallery content - make sure this runs after DOM is loaded
+        setTimeout(() => {
+            const toggleBtn = document.getElementById('toggleTemplateGallery');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const content = document.getElementById('templateGalleryContent');
+                    const btn = document.getElementById('toggleTemplateGallery');
+                    console.log('Toggle clicked, content display:', content.style.display);
+                    if (!content || !btn) {
+                        console.error('Content or button not found');
+                        return;
+                    }
+                    if (content.style.display === 'none' || content.style.display === '') {
+                        content.style.display = 'block';
+                        btn.innerHTML = '✨ Hide Template Gallery';
+                        console.log('Showing gallery');
+                    } else {
+                        content.style.display = 'none';
+                        btn.innerHTML = '✨ Browse Template Gallery (24 Professional Templates)';
+                        console.log('Hiding gallery');
+                    }
+                });
+                console.log('Toggle button listener attached');
+            } else {
+                console.error('Toggle button not found');
+            }
+        }, 500);
+
+        // Show gallery by default on page load if PDF to PPT mode is selected
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing template gallery visibility');
+            const selectedMode = document.querySelector('input[name="generationMode"]:checked')?.value;
+            console.log('Selected mode:', selectedMode);
+            if (selectedMode === 'pdf-to-ppt' || selectedMode === 'pdf-to-both') {
+                const gallerySection = document.getElementById('templateGallerySection');
+                if (gallerySection) {
+                    gallerySection.style.display = 'block';
+                    console.log('Template gallery section shown');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 960px; height: 540px; margin: 0; padding: 0;
+      font-family: {{fontFamily}};
+      background-color: {{backgroundColor}};
+      display: flex; flex-direction: column;
+    }
+    .title-zone { padding: 24px 40px 16px; }
+    h1 { font-size: 32px; color: {{primaryColor}}; margin: 0; }
+    .columns { display: flex; flex: 1; padding: 0 40px 20px; gap: 40px; }
+    .column { flex: 1; }
+    .column-heading {
+      font-size: 18px; font-weight: bold;
+      color: {{secondaryColor}}; margin-bottom: 12px;
+      padding-bottom: 8px; border-bottom: 2px solid {{accentColor}};
+    }
+    .column ul { list-style: none; padding: 0; margin: 0; }
+    .column li {
+      font-size: 16px; color: #333;
+      margin-bottom: 10px; padding-left: 20px;
+      position: relative;
+    }
+    .column li::before {
+      content: "•"; color: {{accentColor}};
+      position: absolute; left: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="title-zone"><h1>{{title}}</h1></div>
+  <div class="columns">
+    <div class="column">
+      {{#if leftColumn.heading}}<div class="column-heading">{{leftColumn.heading}}</div>{{/if}}
+      <ul>
+        {{#each leftColumn.bullets}}<li>{{this}}</li>{{/each}}
+      </ul>
+    </div>
+    <div class="column">
+      {{#if rightColumn.heading}}<div class="column-heading">{{rightColumn.heading}}</div>{{/if}}
+      <ul>
+        {{#each rightColumn.bullets}}<li>{{this}}</li>{{/each}}
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

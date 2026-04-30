@@ -1,0 +1,9 @@
+Welcome to this demonstration of the AI Avatar Presentation Generator. This is an innovative tool that transforms your presentations into engaging video content with AI-generated narration.
+
+In this slide, we explore the core technologies that power this system. We use Coqui TTS for high-quality text-to-speech synthesis, supporting multiple languages and voice cloning capabilities.
+
+The avatar animation is powered by advanced lip-sync technology, either Wav2Lip or SadTalker, which creates realistic talking avatars from a single image. This brings your presentations to life with a human touch.
+
+Video composition is handled by FFmpeg and MoviePy, allowing us to seamlessly overlay the animated avatar onto your presentation slides. The result is a professional-looking video that maintains your slide design while adding an engaging presenter.
+
+Thank you for trying out the AI Avatar Presentation Generator. We hope this tool helps you create more engaging and accessible presentation content. Visit our GitHub repository for updates and to contribute to the project.

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIKMAProf</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/template-gallery.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <a href="{{ url_for('home') }}">
+                        <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 110px; width: auto; display: block;">
+                    </a>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Generation Modes</div>
+                    <a class="nav-item active" data-panel="pdf-to-ppt">
+                        <span class="nav-item-icon">📄</span>
+                        <span class="nav-item-text">AI Course Studio</span>
+                    </a>
+                    <a class="nav-item" data-panel="ppt-to-video" style="display:none;">
+                        <span class="nav-item-icon">🎥</span>
+                        <span class="nav-item-text">PowerPoint to Video</span>
+                    </a>
+                    <a class="nav-item" data-panel="pdf-to-both" style="display:none;">
+                        <span class="nav-item-icon">🚀</span>
+                        <span class="nav-item-text">Complete Package</span>
+                        <span class="nav-item-badge">Popular</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">History</div>
+                    <a class="nav-item" data-panel="recent">
+                        <span class="nav-item-icon">📋</span>
+                        <span class="nav-item-text">Recent Jobs</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Help</div>
+                    <a class="nav-item" data-panel="help">
+                        <span class="nav-item-icon">❓</span>
+                        <span class="nav-item-text">Documentation</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div>
+                    <div class="page-title" id="pageTitle">AI-Powered Course & Knowledge Creation</div>
+                    <div class="page-subtitle" id="pageSubtitle">Convert research, notes and manuscripts into complete teaching material: slides, lessons, and video-ready outputs</div>
+                </div>
+                <div class="top-bar-actions">
+                    <a href="{{ url_for('home') }}" class="btn-back-home">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                        Home
+                    </a>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-panel">
+                <div style="flex: 1;">
+                <!-- PDF to PPT Panel -->
+                <div class="panel-section active" id="panel-pdf-to-ppt">
+                    <form id="uploadFormPdfToPpt" enctype="multipart/form-data">
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">📄 Upload Document</h3>
+                                <p class="form-card-description">Support PDF, DOCX, and TEX formats (max 50MB)</p>
+                            </div>
+
+                            <div class="file-upload-area" id="fileDropZone">
+                                <div class="file-upload-icon">📁</div>
+                                <div class="file-upload-text">Drop your file here or click to browse</div>
+                                <div class="file-upload-hint">Supported: PDF, DOCX, TEX</div>
+                                <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.tex" style="display: none;">
+                            </div>
+                            <div id="fileSelectedInfo" class="file-selected" style="display: none;">
+                                <div class="file-selected-icon">✅</div>
+                                <div class="file-selected-info">
+                                    <div class="file-selected-name" id="fileName"></div>
+                                    <div class="file-selected-size" id="fileSize"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Presentation Name (optional)</label>
+                                <input type="text" class="form-input" name="output_name" placeholder="my-presentation">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">🌐 Presentation Language</label>
+                                <select class="form-select" name="language" id="languageSelect" onchange="desktopUI.onLanguageChange(this.value)">
+                                    <option value="en">English</option>
+                                    <option value="ar">العربية (Arabic)</option>
+                                    <option value="fr">Français (French)</option>
+                                    <option value="de">Deutsch (German)</option>
+                                    <option value="es">Español (Spanish)</option>
+                                    <option value="zh">中文 (Chinese)</option>
+                                    <option value="tr">Türkçe (Turkish)</option>
+                                    <option value="ur">اردو (Urdu)</option>
+                                    <option value="it">Italiano (Italian)</option>
+                                    <option value="pt">Português (Portuguese)</option>
+                                    <option value="ru">Русский (Russian)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎨 Choose Template</h3>
+                                <p class="form-card-description">Select a professional presentation style</p>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <select class="form-select" id="templateSelect" onchange="desktopUI.selectTemplate(this.value)">
+                                    <!-- Options populated by JS -->
+                                </select>
+                            </div>
+                            <input type="hidden" id="templateStyle" name="template_style" value="modern">
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🌈 Choose Color Scheme</h3>
+                                <p class="form-card-description">Pick your preferred color palette</p>
+                            </div>
+                            <div class="color-grid-compact" id="colorGridCompact">
+                                <!-- Colors will be loaded here -->
+                            </div>
+                            <input type="hidden" id="colorScheme" name="color_scheme" value="blue">
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">📐 Slide Layout</h3>
+                                <p class="form-card-description">Choose how content is structured across slides</p>
+                            </div>
+                            <div class="layout-options">
+                                <label class="layout-option selected" id="layoutOptDefault" onclick="desktopUI.selectLayout('default', this)">
+                                    <input type="radio" name="slide_layout" value="default" checked hidden>
+                                    <div class="layout-mockup">
+                                        <div class="lm-title-bar"></div>
+                                        <div class="lm-line"></div>
+                                        <div class="lm-line lm-short"></div>
+                                        <div class="lm-line"></div>
+                                        <div class="lm-line lm-short"></div>
+                                    </div>
+                                    <div class="layout-option-text">
+                                        <div class="layout-option-title">Default Layout</div>
+                                        <div class="layout-option-desc">Title and bullet points together on each slide</div>
+                                    </div>
+                                </label>
+                                <label class="layout-option" id="layoutOptSection" onclick="desktopUI.selectLayout('section-header', this)">
+                                    <input type="radio" name="slide_layout" value="section-header" hidden>
+                                    <div class="layout-mockup layout-mockup-split">
+                                        <div class="lm-parent-slide">
+                                            <div class="lm-section-label"></div>
+                                        </div>
+                                        <div class="lm-child-slide">
+                                            <div class="lm-title-bar lm-title-sm"></div>
+                                            <div class="lm-line lm-short"></div>
+                                            <div class="lm-line"></div>
+                                        </div>
+                                    </div>
+                                    <div class="layout-option-text">
+                                        <div class="layout-option-title">Section-Header Layout</div>
+                                        <div class="layout-option-desc">Section title on its own slide, followed by content slides beneath it</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">
+                            ✨ Generate Presentation
+                        </button>
+                    </form>
+                </div>
+
+                <!-- PPT to Video Panel -->
+                <div class="panel-section" id="panel-ppt-to-video">
+                    <form id="uploadFormPptToVideo" enctype="multipart/form-data">
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">📊 Upload PowerPoint</h3>
+                                <p class="form-card-description">Upload your PPTX file</p>
+                            </div>
+
+                            <div class="file-upload-area" id="pptDropZone">
+                                <div class="file-upload-icon">📊</div>
+                                <div class="file-upload-text">Drop your PPTX file here</div>
+                                <input type="file" id="pptFileInput" name="pptx_file" accept=".ppt,.pptx" style="display: none;">
+                            </div>
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">📝 Upload Transcript</h3>
+                                <p class="form-card-description">Upload transcript TXT file</p>
+                            </div>
+
+                            <div class="file-upload-area" id="transcriptDropZone">
+                                <div class="file-upload-icon">📝</div>
+                                <div class="file-upload-text">Drop your transcript file here</div>
+                                <input type="file" id="transcriptFileInput" name="transcript_file" accept=".txt,.md" style="display: none;">
+                            </div>
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎭 Video Settings</h3>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Avatar</label>
+                                <select class="form-select" name="avatar_choice">
+                                    <option value="">No Avatar</option>
+                                    <option value="avatar_woman.png">Woman Avatar</option>
+                                    <option value="avatar_man.png">Man Avatar</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Voice</label>
+                                <select class="form-select" name="voice_choice">
+                                    <option value="gtts">Google TTS</option>
+                                    <option value="edge-tts">Edge TTS</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Avatar Position</label>
+                                <select class="form-select" name="avatar_position">
+                                    <option value="bottom-right">Bottom Right</option>
+                                    <option value="bottom-left">Bottom Left</option>
+                                    <option value="top-right">Top Right</option>
+                                    <option value="top-left">Top Left</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">
+                            🎥 Generate Video
+                        </button>
+                    </form>
+                </div>
+
+                <!-- PDF to Both Panel -->
+                <div class="panel-section" id="panel-pdf-to-both">
+                    <form id="uploadFormPdfToBoth" enctype="multipart/form-data">
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">📄 Upload Document</h3>
+                                <p class="form-card-description">Complete workflow: PDF → PPTX → Video</p>
+                            </div>
+
+                            <div class="file-upload-area" id="fileBothDropZone">
+                                <div class="file-upload-icon">📁</div>
+                                <div class="file-upload-text">Drop your PDF here</div>
+                                <input type="file" id="fileBothInput" name="file" accept=".pdf,.docx,.tex" style="display: none;">
+                            </div>
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎨 Presentation Settings</h3>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Template</label>
+                                <select class="form-select" name="template_style">
+                                    <option value="modern">Modern</option>
+                                    <option value="corporate">Corporate</option>
+                                    <option value="creative">Creative</option>
+                                    <option value="academic">Academic</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Color Scheme</label>
+                                <select class="form-select" name="color_scheme">
+                                    <option value="blue">Professional Blue</option>
+                                    <option value="purple">Creative Purple</option>
+                                    <option value="green">Nature Green</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Number of Slides</label>
+                                <div class="slide-count-selector">
+                                    <input type="range" id="slideCountRangeBoth" name="num_slides" min="5" max="30" value="12" class="slide-range" oninput="document.getElementById('slideCountDisplayBoth').textContent = this.value">
+                                    <div class="slide-count-display">
+                                        <span id="slideCountDisplayBoth">12</span> slides
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎥 Video Settings</h3>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Avatar</label>
+                                <select class="form-select" name="avatar_choice">
+                                    <option value="">No Avatar</option>
+                                    <option value="avatar_woman.png">Woman Avatar</option>
+                                    <option value="avatar_man.png">Man Avatar</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Voice</label>
+                                <select class="form-select" name="voice_choice">
+                                    <option value="gtts">Google TTS</option>
+                                    <option value="edge-tts">Edge TTS</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">
+                            🚀 Generate Presentation & Video
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Templates Panel -->
+                <div class="panel-section" id="panel-templates">
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">🎨 Template Gallery</h3>
+                            <p class="form-card-description">Browse all 24 professional templates</p>
+                        </div>
+                        <div id="templateGallery"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">🌈 Color Schemes</h3>
+                            <p class="form-card-description">27 beautiful color palettes</p>
+                        </div>
+                        <div id="colorGallery"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Jobs Panel -->
+                <div class="panel-section" id="panel-recent">
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">📋 Recent Jobs</h3>
+                            <p class="form-card-description">Your presentation history</p>
+                        </div>
+                        <div id="recentJobsList">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Help Panel -->
+                <div class="panel-section" id="panel-help">
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">📚 Documentation</h3>
+                        </div>
+                        <div style="line-height: 1.8;">
+                            <h4>Getting Started</h4>
+                            <p>1. Select a mode from the sidebar<br>
+                            2. Upload your files<br>
+                            3. Choose template and colors<br>
+                            4. Click generate!</p>
+
+                            <h4 style="margin-top: 24px;">Modes</h4>
+                            <p><strong>PDF to PowerPoint:</strong> Convert documents to presentations<br>
+                            <strong>PowerPoint to Video:</strong> Add avatar narration to slides<br>
+                            <strong>PDF to Both:</strong> Complete workflow in one step</p>
+
+                            <h4 style="margin-top: 24px;">Support</h4>
+                            <p>For help, check the terminal logs where the app is running.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                </div><!-- end flex-grow panels wrapper -->
+        </div>
+    </div>
+
+    <!-- Delete Job Confirmation Modal -->
+    <div id="deleteJobModal" class="delete-modal-overlay" onclick="if(event.target===this) desktopUI.closeDeleteModal()">
+        <div class="delete-modal">
+            <div class="delete-modal-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D2D5C" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+            </div>
+            <h3 class="delete-modal-title">Delete Job?</h3>
+            <p class="delete-modal-body">You are about to permanently delete <strong id="deleteJobName"></strong>. This action cannot be undone.</p>
+            <div class="delete-modal-actions">
+                <button class="delete-modal-cancel" onclick="desktopUI.closeDeleteModal()">Cancel</button>
+                <button class="delete-modal-confirm" onclick="desktopUI.executeDeleteJob()">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .delete-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-modal-overlay.active { display: flex; }
+        .delete-modal {
+            background: #fff;
+            border-radius: 16px;
+            padding: 36px 32px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+        .delete-modal-icon {
+            background: rgba(29, 45, 92, 0.08);
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .delete-modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1D2D5C;
+            margin: 0 0 10px;
+        }
+        .delete-modal-body {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+            margin: 0 0 28px;
+        }
+        .delete-modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .delete-modal-cancel {
+            flex: 1;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1.5px solid #d1d5db;
+            background: #fff;
+            color: #1D2D5C;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .delete-modal-cancel:hover { background: #f0f4ff; }
+        .delete-modal-confirm {
+            flex: 1;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: #1D2D5C;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .delete-modal-confirm:hover { background: #2AADA6; }
+        .job-delete-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .job-delete-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1.5px solid #C09A45;
+            background: rgba(192, 154, 69, 0.12);
+            color: #C09A45;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .job-delete-btn:hover { background: #C09A45; color: #fff; }
+    </style>
+
+    <script>window.APP_PREFIX = '{{ request.script_root }}';</script>
+    <script src="{{ url_for('static', filename='js/desktop-ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/template-gallery.js') }}"></script>
+</body>
+</html>
