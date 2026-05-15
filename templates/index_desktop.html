@@ -123,29 +123,32 @@
                             </div>
                         </div>
 
-                        <div class="form-card">
-                            <div class="form-card-header">
-                                <h3 class="form-card-title">🎨 Choose Template</h3>
-                                <p class="form-card-description">Select a professional presentation style</p>
+                        <!-- Selected Template Display (shown after confirming) -->
+                        <div class="selected-template-display" id="selectedTemplateDisplay" style="display: none;">
+                            <div class="selected-summary">
+                                <span class="selected-label">Selected:</span>
+                                <span class="selected-template-name" id="selectedTemplateName">Modern</span>
+                                <span class="selected-divider">•</span>
+                                <span class="selected-color-name" id="selectedColorName">Professional Blue</span>
+                                <button type="button" id="changeTemplateBtn" class="change-template-btn">Change</button>
                             </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                                <select class="form-select" id="templateSelect" onchange="desktopUI.selectTemplate(this.value)">
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                            <input type="hidden" id="templateStyle" name="template_style" value="modern">
                         </div>
 
-                        <div class="form-card">
-                            <div class="form-card-header">
-                                <h3 class="form-card-title">🌈 Choose Color Scheme</h3>
-                                <p class="form-card-description">Pick your preferred color palette</p>
+                        <!-- Template Gallery Section (shown by default) -->
+                        <div id="templateGallerySection">
+                            <div id="templateGalleryContent">
+                                <div class="gallery-header">
+                                    <h2>Choose Your Template &amp; Color</h2>
+                                    <p>Select from 24 professionally designed templates and 27 color schemes</p>
+                                </div>
+                                <div id="templateGallery"></div>
+                                <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #2c3e50;">Select Color Scheme</h3>
+                                <div id="colorGallery"></div>
                             </div>
-                            <div class="color-grid-compact" id="colorGridCompact">
-                                <!-- Colors will be loaded here -->
-                            </div>
-                            <input type="hidden" id="colorScheme" name="color_scheme" value="blue">
                         </div>
+
+                        <input type="hidden" id="templateStyle" name="template_style" value="modern">
+                        <input type="hidden" id="colorScheme" name="color_scheme" value="blue">
 
                         <div class="form-card">
                             <div class="form-card-header">
@@ -239,8 +242,9 @@
                             <div class="form-group">
                                 <label class="form-label">Voice</label>
                                 <select class="form-select" name="voice_choice">
-                                    <option value="gtts">Google TTS</option>
-                                    <option value="edge-tts">Edge TTS</option>
+                                    <option value="edge-tts" selected>Neural TTS — Natural &amp; Multilingual</option>
+                                    <option value="gtts">Google TTS (Basic fallback)</option>
+                                    <option value="tts_models/multilingual/multi-dataset/xtts_v2">XTTS v2 (Voice Cloning)</option>
                                 </select>
                             </div>
 
@@ -329,8 +333,9 @@
                             <div class="form-group">
                                 <label class="form-label">Voice</label>
                                 <select class="form-select" name="voice_choice">
-                                    <option value="gtts">Google TTS</option>
-                                    <option value="edge-tts">Edge TTS</option>
+                                    <option value="edge-tts" selected>Neural TTS — Natural &amp; Multilingual</option>
+                                    <option value="gtts">Google TTS (Basic fallback)</option>
+                                    <option value="tts_models/multilingual/multi-dataset/xtts_v2">XTTS v2 (Voice Cloning)</option>
                                 </select>
                             </div>
                         </div>
@@ -346,17 +351,8 @@
                     <div class="form-card">
                         <div class="form-card-header">
                             <h3 class="form-card-title">🎨 Template Gallery</h3>
-                            <p class="form-card-description">Browse all 24 professional templates</p>
+                            <p class="form-card-description">Select templates from the AI Course Studio panel</p>
                         </div>
-                        <div id="templateGallery"></div>
-                    </div>
-
-                    <div class="form-card">
-                        <div class="form-card-header">
-                            <h3 class="form-card-title">🌈 Color Schemes</h3>
-                            <p class="form-card-description">27 beautiful color palettes</p>
-                        </div>
-                        <div id="colorGallery"></div>
                     </div>
                 </div>
 

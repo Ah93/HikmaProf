@@ -238,11 +238,11 @@
                         <p class="form-hint">Select a voice model for narration</p>
                         <div class="voice-selector">
                             <select id="voiceChoice" name="voice_choice">
-                                <option value="gtts" selected>Google TTS (Default - Fast)</option>
-                                <option value="edge-tts">Microsoft Edge TTS (High Quality, Multiple Voices)</option>
-                                <option value="tts_models/en/ljspeech/tacotron2-DDC">LJSpeech Tacotron2 (Female)</option>
-                                <option value="tts_models/en/vctk/vits">VCTK VITS (Multiple Speakers)</option>
-                                <option value="tts_models/multilingual/multi-dataset/xtts_v2">XTTS v2 (Multilingual)</option>
+                                <option value="edge-tts" selected>Neural TTS — Natural &amp; Multilingual (Recommended)</option>
+                                <option value="gtts">Google TTS (Basic fallback)</option>
+                                <option value="tts_models/multilingual/multi-dataset/xtts_v2">XTTS v2 (Voice Cloning)</option>
+                                <option value="tts_models/en/vctk/vits">VCTK VITS (Multi-Speaker English)</option>
+                                <option value="tts_models/en/ljspeech/tacotron2-DDC">LJSpeech Tacotron2 (Female EN)</option>
                             </select>
                             <button type="button" class="btn-preview" id="voicePreviewBtn" title="Preview this voice">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

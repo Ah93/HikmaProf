@@ -1513,7 +1513,7 @@ def _parse_transcript_for_tts(transcript_path, n_slides):
         body = re.sub(r'\*(.+?)\*', r'\1', body)
         body = body.strip()
         if body:
-            texts.append(body[:900])   # cap length for TTS engine
+            texts.append(body[:1800])  # cap length for TTS engine
 
     # Pad or trim to match actual slide count
     while len(texts) < n_slides:
@@ -1525,7 +1525,7 @@ def _parse_transcript_for_tts(transcript_path, n_slides):
 # Secondary voice used as alternate for more natural variety where available
 _EDGE_TTS_VOICES = {
     'en': 'en-US-JennyNeural',      # warm, natural American English
-    'ar': 'ar-SA-ZariyahNeural',    # clear Modern Standard Arabic
+    'ar': 'ar-EG-SalmaNeural',       # Egyptian Arabic — more natural, widely understood
     'fr': 'fr-FR-DeniseNeural',     # natural French
     'es': 'es-ES-ElviraNeural',     # clear Castilian Spanish
     'de': 'de-DE-KatjaNeural',      # natural German
@@ -1561,8 +1561,8 @@ def _tts_audio(text, out_path, language='en'):
         import edge_tts
 
         async def _run_edge():
-            communicate = edge_tts.Communicate(text, edge_voice)
-            await communicate.save(out_path)
+            communicate = edge_tts.Communicate(text, edge_voice, rate="-15%")
+            await asyncio.wait_for(communicate.save(out_path), timeout=60)
 
         asyncio.run(_run_edge())
         print(f'[VOICE VIDEO] edge-tts OK  voice={edge_voice}  lang={lang}')
@@ -1613,7 +1613,8 @@ def _compose_voice_clip(img_path, audio_path, clip_path):
 
 def _concat_voice_clips(clip_paths, output_path):
     """Concatenate all slide MP4 clips into the final video."""
-    list_path = output_path + '.list.txt'
+    abs_output = os.path.abspath(output_path)
+    list_path = abs_output + '.list.txt'
     with open(list_path, 'w', encoding='utf-8') as f:
         for p in clip_paths:
             safe = os.path.abspath(p).replace('\\', '/').replace("'", "\\'")
@@ -1622,16 +1623,16 @@ def _concat_voice_clips(clip_paths, output_path):
         result = subprocess.run(
             ['ffmpeg', '-y',
              '-f', 'concat', '-safe', '0',
-             '-i', list_path,
+             '-i', os.path.abspath(list_path),
              '-c', 'copy',
-             output_path],
+             abs_output],
             capture_output=True, timeout=300
         )
         if result.returncode != 0:
             raise RuntimeError(f'FFmpeg concat error: {result.stderr.decode(errors="replace")[-500:]}')
     finally:
         try:
-            os.remove(list_path)
+            os.remove(os.path.abspath(list_path))
         except OSError:
             pass
 
@@ -1643,12 +1644,12 @@ def _update_voice_job(job_id, status, progress, error=''):
 
 def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en'):
     """Full pipeline: PPTX → slide images → TTS audio → compose clips → concatenate."""
-    import fitz  # PyMuPDF
-
-    work_dir = os.path.join(job_dir, 'voice_video')
-    os.makedirs(work_dir, exist_ok=True)
-
     try:
+        import fitz  # PyMuPDF
+
+        work_dir = os.path.join(job_dir, 'voice_video')
+        os.makedirs(work_dir, exist_ok=True)
+
         # ── Step 1: PPTX → PDF ───────────────────────────────────────────────
         _update_voice_job(job_id, 'converting_slides', 5)
         print(f'[VOICE VIDEO] Converting PPTX to PDF for job {job_id}…')

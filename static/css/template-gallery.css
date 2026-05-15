@@ -52,11 +52,11 @@
     font-size: 0.88rem;
 }
 
-/* ─── Grid: 4 columns, responsive ─── */
+/* ─── Grid: 6 columns, responsive ─── */
 .template-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.65rem;
 }
 
 /* ============================================
@@ -87,7 +87,7 @@
    SLIDE MOCKUP — base layout
    ============================================ */
 .template-preview {
-    height: 158px;
+    height: 110px;
     position: relative;
     overflow: hidden;
 }
@@ -170,25 +170,25 @@
 
 /* ─── Card Info Strip ─── */
 .template-info {
-    padding: 0.75rem 0.9rem;
+    padding: 0.45rem 0.65rem;
     border-top: 1px solid #f1f5f9;
     overflow: hidden;
 }
 
 .template-name {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: #1e293b;
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .template-description {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     color: #94a3b8;
-    line-height: 1.35;
+    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -604,9 +604,16 @@
 }
 
 /* ─── Responsive ─── */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
     .template-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .template-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
     }
 }
 
@@ -617,10 +624,160 @@
 
     .template-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
 
     .color-grid {
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     }
+}
+
+/* ── 9. ACADEMIC ─────────────────────────────
+   Navy header strip, warm cream body, maroon bottom rule */
+.template-card[data-template-id="academic"] .template-preview {
+    background:
+        linear-gradient(to bottom, #1e3a5f 0px, #1e3a5f 32px, transparent 32px),
+        linear-gradient(to top, #7c2d12 0px, #7c2d12 4px, transparent 4px),
+        linear-gradient(to right, rgba(30,58,95,0.15) 0px, rgba(30,58,95,0.15) 3px, transparent 3px),
+        #f5f0e8;
+}
+.template-card[data-template-id="academic"] .tp-decoration {
+    left: 0; right: 0; top: 32px;
+    height: 2px;
+    background: #8b5a2b;
+}
+.template-card[data-template-id="academic"] .tp-slide { padding-top: 8px; }
+.template-card[data-template-id="academic"] .tp-eyebrow { background: rgba(255,255,255,0.55); height: 2px; width: 18px; }
+.template-card[data-template-id="academic"] .tp-line {
+    background: rgba(30,58,95,0.2);
+    height: 3px;
+}
+
+/* ── 10. NATURE ──────────────────────────────
+   Deep forest green, horizontal leaf-rule lines, white accents */
+.template-card[data-template-id="nature"] .template-preview {
+    background:
+        linear-gradient(to right, rgba(255,255,255,0.22) 0px, rgba(255,255,255,0.22) 4px, transparent 4px),
+        linear-gradient(to bottom, rgba(255,255,255,0.15) 0px, rgba(255,255,255,0.15) 4px, transparent 4px),
+        linear-gradient(to top, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 5px, transparent 5px),
+        #166534;
+}
+.template-card[data-template-id="nature"] .tp-decoration {
+    inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 100% 16px;
+}
+.template-card[data-template-id="nature"] .tp-slide { padding-left: 18px; }
+.template-card[data-template-id="nature"] .tp-eyebrow { background: rgba(255,255,255,0.65); }
+.template-card[data-template-id="nature"] .tp-line { background: rgba(255,255,255,0.32); }
+
+/* ── 11. RETRO ───────────────────────────────
+   Warm amber, thick dark-brown border frame, inner rule */
+.template-card[data-template-id="retro"] .template-preview {
+    background:
+        linear-gradient(to right,  #92400e 0px, #92400e 7px, transparent 7px),
+        linear-gradient(to left,   #92400e 0px, #92400e 7px, transparent 7px),
+        linear-gradient(to bottom, #92400e 0px, #92400e 7px, transparent 7px),
+        linear-gradient(to top,    #92400e 0px, #92400e 7px, transparent 7px),
+        #fbbf24;
+}
+.template-card[data-template-id="retro"] .tp-decoration {
+    left: 14px; right: 14px; top: 14px; bottom: 14px;
+    border: 2px solid rgba(146,64,14,0.4);
+    box-shadow: inset 0 0 0 1px rgba(146,64,14,0.2);
+}
+.template-card[data-template-id="retro"] .tp-slide { padding: 22px 20px 14px; }
+.template-card[data-template-id="retro"] .tp-eyebrow { background: rgba(146,64,14,0.55); height: 2px; }
+.template-card[data-template-id="retro"] .tp-title-text {
+    color: #431407;
+    font-weight: 900;
+    font-size: 12px;
+    text-shadow: none;
+}
+.template-card[data-template-id="retro"] .tp-line {
+    background: rgba(146,64,14,0.28);
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* ── 12. LUXURY ──────────────────────────────
+   Near-black, thick gold left bar + thin top/bottom rules, gold title */
+.template-card[data-template-id="luxury"] .template-preview {
+    background:
+        linear-gradient(to right,  rgba(212,175,55,0.95) 0px, rgba(212,175,55,0.95) 5px, transparent 5px),
+        linear-gradient(to bottom, rgba(212,175,55,0.5)  0px, rgba(212,175,55,0.5)  3px, transparent 3px),
+        linear-gradient(to top,    rgba(212,175,55,0.5)  0px, rgba(212,175,55,0.5)  3px, transparent 3px),
+        #0c0c0c;
+}
+.template-card[data-template-id="luxury"] .tp-decoration {
+    left: 18px; right: 18px;
+    top: 50%; transform: translateY(-50%);
+    height: 1px;
+    background: rgba(212,175,55,0.28);
+    box-shadow: 0 3px 0 rgba(212,175,55,0.12);
+}
+.template-card[data-template-id="luxury"] .tp-slide { padding-left: 20px; padding-top: 18px; }
+.template-card[data-template-id="luxury"] .tp-eyebrow { background: rgba(212,175,55,0.7); height: 1px; border-radius: 0; width: 20px; }
+.template-card[data-template-id="luxury"] .tp-title-text {
+    color: #d4af37;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    text-shadow: 0 0 8px rgba(212,175,55,0.4);
+}
+.template-card[data-template-id="luxury"] .tp-line { background: rgba(212,175,55,0.25); }
+
+/* ============================================
+   SELECTED TEMPLATE DISPLAY BAR
+   ============================================ */
+.selected-template-display {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    color: white;
+}
+
+.selected-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selected-label {
+    font-weight: 500;
+    opacity: 0.8;
+    font-size: 13px;
+}
+
+.selected-template-name,
+.selected-color-name {
+    font-weight: 700;
+    font-size: 13px;
+    background: rgba(255,255,255,0.18);
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+.selected-divider { opacity: 0.4; }
+
+.change-template-btn {
+    margin-left: auto;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: all 0.18s;
+    font-family: inherit;
+}
+
+.change-template-btn:hover { background: rgba(255,255,255,0.28); }
+
+#confirmTemplateBtn {
+    font-size: 14.5px;
+    padding: 12px 24px;
 }

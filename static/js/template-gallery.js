@@ -30,8 +30,8 @@ class TemplateGallery {
         const container = document.getElementById('templateGallery');
         if (!container) return;
 
-        // Show only 8 curated, modern templates
-        const FEATURED_IDS = ['modern', 'minimal', 'tech', 'creative', 'corporate', 'elegant', 'startup', 'magazine'];
+        // Show 12 curated templates
+        const FEATURED_IDS = ['modern', 'minimal', 'tech', 'creative', 'corporate', 'elegant', 'startup', 'magazine', 'academic', 'nature', 'retro', 'luxury'];
         const featured = FEATURED_IDS
             .map(id => this.templates.find(t => t.id === id))
             .filter(Boolean);

@@ -155,9 +155,9 @@ class DesktopUI {
             const formData = new FormData(form);
             formData.append('generation_mode', mode);
 
-            // Add selected template and color
-            formData.set('template_style', this.selectedTemplate);
-            formData.set('color_scheme', this.selectedColor);
+            // Add selected template and color (read from hidden inputs updated by gallery)
+            formData.set('template_style', document.getElementById('templateStyle')?.value || this.selectedTemplate);
+            formData.set('color_scheme', document.getElementById('colorScheme')?.value || this.selectedColor);
 
             try {
                 const button = form.querySelector('.btn-primary');
@@ -2631,6 +2631,16 @@ class DesktopUI {
             .job-status.failed { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
             .job-status.in-progress { background: rgba(42, 173, 166, 0.2); color: #2AADA6; }
             .job-status.queued { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+            .job-error-msg {
+                margin: 8px 0 4px;
+                padding: 8px 12px;
+                background: rgba(239, 68, 68, 0.08);
+                border-left: 3px solid #ef4444;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #ef4444;
+                word-break: break-word;
+            }
             .job-progress-section {
                 margin: 12px 0;
             }
@@ -2815,6 +2825,10 @@ class DesktopUI {
             </div>
         ` : '';
 
+        const errorSection = job.status === 'failed' && job.error ? `
+            <div class="job-error-msg">⚠️ ${this.escapeHtml(job.error)}</div>
+        ` : '';
+
         return `
             <div class="job-card ${isInProgress ? 'in-progress' : ''}" data-job-id="${job.job_id}">
                 <div class="job-header">
@@ -2825,6 +2839,7 @@ class DesktopUI {
                     <span class="job-status ${statusClass}">${statusEmoji} ${statusText}</span>
                 </div>
                 ${progressSection}
+                ${errorSection}
                 <div class="job-meta">
                     <span>🎨 ${template}</span>
                     <span>🎨 ${color}</span>

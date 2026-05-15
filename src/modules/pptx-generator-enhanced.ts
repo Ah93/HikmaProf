@@ -54,7 +54,7 @@ export class EnhancedPPTXGenerator {
 
     // Detect RTL language — config takes priority, then env var
     const lang = config?.language || process.env.PRESENTATION_LANGUAGE || 'en';
-    this.isRTL = lang === 'ar';
+    this.isRTL = ['ar', 'ur'].includes(lang);
 
     // Ensure directories exist
     fs.mkdirSync(this.slidesDir, { recursive: true });
@@ -80,6 +80,10 @@ export class EnhancedPPTXGenerator {
         rtlMode: true,
         align: options.align === 'center' ? 'center' : 'right',
       };
+    }
+    // Always enable word-wrap so text never bleeds beyond the text-box boundary
+    if (options.wrap === undefined) {
+      options = { ...options, wrap: true };
     }
     slide.addText(text, options);
   }
@@ -1611,26 +1615,45 @@ export class EnhancedPPTXGenerator {
     // Bullets with custom styling (density-aware)
     if (def.content.bullets && def.content.bullets.length > 0) {
       const bulletCount = def.content.bullets.length;
-      const avgChars = def.content.bullets.reduce((acc, b) => acc + String(b?.text || '').length, 0) / Math.max(1, bulletCount);
-      const isVeryDense = bulletCount >= 10;
-      const isDense = bulletCount >= 6 || avgChars >= 85;
-      const fontSize = isVeryDense
-        ? Math.max(12, this.templateStyle.fontSizes.body - 4)
+      const totalChars = def.content.bullets.reduce((acc, b) => acc + String(b?.text || '').length, 0);
+      const avgChars = totalChars / Math.max(1, bulletCount);
+      // Three density levels; totalChars catches long text even with few bullets
+      const isVeryDense = bulletCount >= 9 || totalChars > 700 || (bulletCount >= 6 && avgChars >= 90);
+      const isDense    = bulletCount >= 6 || avgChars >= 70 || totalChars > 400;
+      const baseFont   = this.templateStyle.fontSizes.body;
+      const fontSize   = isVeryDense
+        ? Math.max(10, baseFont - 6)
         : isDense
-          ? Math.max(14, this.templateStyle.fontSizes.body - 2)
-          : this.templateStyle.fontSizes.body;
-      const paraSpace = isVeryDense ? 2 : isDense ? 4 : 6;
+          ? Math.max(12, baseFont - 3)
+          : baseFont;
+      const paraSpace  = isVeryDense ? 0 : isDense ? 3 : 5;
 
-      const bulletText = def.content.bullets.map(b => ({
-        text: b.text,
-        options: {
-          bullet: { code: this.getBulletCharacter(), indent: 18, hanging: 6 },
-          fontSize,
-          color: this.colorScheme.text,
-          paraSpaceBefore: paraSpace,
-          paraSpaceAfter: paraSpace
-        }
-      }));
+      const bulletsArr = def.content.bullets;
+      let bulletText: any[];
+      if (this.isRTL) {
+        // RTL: LibreOffice collapses paragraph-level bullets; manually prepend char + breakLine
+        bulletText = [];
+        bulletsArr.forEach((b, idx) => {
+          bulletText.push({
+            text: `\u2022  ${b.text}`,
+            options: { rtlMode: true, fontSize, color: this.colorScheme.text, paraSpaceBefore: paraSpace, paraSpaceAfter: 0 }
+          });
+          if (idx < bulletsArr.length - 1) {
+            bulletText.push({ text: '', options: { breakLine: true } });
+          }
+        });
+      } else {
+        bulletText = bulletsArr.map(b => ({
+          text: b.text,
+          options: {
+            bullet: { code: this.getBulletCharacter(), indent: 18, hanging: 6 },
+            fontSize,
+            color: this.colorScheme.text,
+            paraSpaceBefore: paraSpace,
+            paraSpaceAfter: paraSpace
+          }
+        }));
+      }
 
       this.addText(slide, bulletText, {
         x: this.MARGIN_X + 0.15,
@@ -1728,10 +1751,21 @@ export class EnhancedPPTXGenerator {
       const leftItems = leftCol.bullets || leftCol.items || leftCol.text;
       if (leftItems) {
         const itemsArray = Array.isArray(leftItems) ? leftItems : [leftItems];
-        const leftBullets = itemsArray.map((b: any) => ({
-          text: String(b),
-          options: { bullet: { code: this.getBulletCharacter(), indent: 16, hanging: 6 }, fontSize: 15 }
-        }));
+        const colTotalChars = itemsArray.reduce((a: number, b: any) => a + String(b).length, 0);
+        const colFontSize = colTotalChars > 500 || itemsArray.length >= 7 ? 12 : colTotalChars > 300 || itemsArray.length >= 5 ? 13 : 15;
+        let leftBullets: any[];
+        if (this.isRTL) {
+          leftBullets = [];
+          itemsArray.forEach((b: any, idx: number) => {
+            leftBullets.push({ text: `\u2022  ${String(b)}`, options: { rtlMode: true, fontSize: colFontSize } });
+            if (idx < itemsArray.length - 1) leftBullets.push({ text: '', options: { breakLine: true } });
+          });
+        } else {
+          leftBullets = itemsArray.map((b: any) => ({
+            text: String(b),
+            options: { bullet: { code: this.getBulletCharacter(), indent: 16, hanging: 6 }, fontSize: colFontSize }
+          }));
+        }
 
         this.addText(slide, leftBullets, {
           x: 0.7, y: 1.75, w: 3.9, h: 3.6,
@@ -1760,10 +1794,21 @@ export class EnhancedPPTXGenerator {
       const rightItems = rightCol.bullets || rightCol.items || rightCol.text;
       if (rightItems) {
         const itemsArray = Array.isArray(rightItems) ? rightItems : [rightItems];
-        const rightBullets = itemsArray.map((b: any) => ({
-          text: String(b),
-          options: { bullet: { code: this.getBulletCharacter(), indent: 16, hanging: 6 }, fontSize: 15 }
-        }));
+        const colTotalChars = itemsArray.reduce((a: number, b: any) => a + String(b).length, 0);
+        const colFontSize = colTotalChars > 500 || itemsArray.length >= 7 ? 12 : colTotalChars > 300 || itemsArray.length >= 5 ? 13 : 15;
+        let rightBullets: any[];
+        if (this.isRTL) {
+          rightBullets = [];
+          itemsArray.forEach((b: any, idx: number) => {
+            rightBullets.push({ text: `\u2022  ${String(b)}`, options: { rtlMode: true, fontSize: colFontSize } });
+            if (idx < itemsArray.length - 1) rightBullets.push({ text: '', options: { breakLine: true } });
+          });
+        } else {
+          rightBullets = itemsArray.map((b: any) => ({
+            text: String(b),
+            options: { bullet: { code: this.getBulletCharacter(), indent: 16, hanging: 6 }, fontSize: colFontSize }
+          }));
+        }
 
         this.addText(slide, rightBullets, {
           x: 5.45, y: 1.75, w: 3.9, h: 3.6,
@@ -2096,16 +2141,19 @@ export class EnhancedPPTXGenerator {
       const fontSize = Math.max(16, Math.min(22, isDense ? 18 : 20));
       const paraSpace = isDense ? 4 : 6;
 
-      const takeaways = takeawaysData.map((t: any) => ({
-        text: t,
-        options: {
-          bullet: { code: this.getBulletCharacter(), indent: 18, hanging: 6 },
-          fontSize,
-          color: this.colorScheme.text,
-          paraSpaceBefore: paraSpace,
-          paraSpaceAfter: paraSpace
-        }
-      }));
+      let takeaways: any[];
+      if (this.isRTL) {
+        takeaways = [];
+        takeawaysData.forEach((t: any, idx: number) => {
+          takeaways.push({ text: `\u2022  ${t}`, options: { rtlMode: true, fontSize, color: this.colorScheme.text, paraSpaceBefore: paraSpace, paraSpaceAfter: 0 } });
+          if (idx < takeawaysData.length - 1) takeaways.push({ text: '', options: { breakLine: true } });
+        });
+      } else {
+        takeaways = takeawaysData.map((t: any) => ({
+          text: t,
+          options: { bullet: { code: this.getBulletCharacter(), indent: 18, hanging: 6 }, fontSize, color: this.colorScheme.text, paraSpaceBefore: paraSpace, paraSpaceAfter: paraSpace }
+        }));
+      }
 
       this.addText(slide, takeaways, {
         x: 0.75, y: 1.35, w: 8.5, h: 4.25,
@@ -2357,6 +2405,7 @@ export class EnhancedPPTXGenerator {
 
   // ===== HELPER METHODS =====
   private getBulletCharacter(): string {
+    if (this.isRTL) return '2022'; // always circle for RTL — checkmark/arrow look wrong in RTL
     const bulletMap: Record<string, string> = {
       'circle': '2022',
       'square': '25A0',
@@ -2751,7 +2800,7 @@ export class EnhancedPPTXGenerator {
     if (leftItems.length > 0) {
       const leftBullets = leftItems.map((item: any) => ({
         text: typeof item === 'string' ? item : (item.text || String(item)),
-        options: { bullet: { code: this.getBulletCharacter(), indent: 14 }, fontSize: 13 }
+        options: { bullet: { code: this.getBulletCharacter(), indent: 14 }, fontSize: 13, ...(this.isRTL ? { rtlMode: true } : {}) }
       }));
       this.addText(slide, leftBullets, {
         x: 0.7, y: 2.1, w: 3.8, h: 2.9,
@@ -2798,7 +2847,7 @@ export class EnhancedPPTXGenerator {
     if (rightItems.length > 0) {
       const rightBullets = rightItems.map((item: any) => ({
         text: typeof item === 'string' ? item : (item.text || String(item)),
-        options: { bullet: { code: this.getBulletCharacter(), indent: 14 }, fontSize: 13 }
+        options: { bullet: { code: this.getBulletCharacter(), indent: 14 }, fontSize: 13, ...(this.isRTL ? { rtlMode: true } : {}) }
       }));
       this.addText(slide, rightBullets, {
         x: 5.5, y: 2.1, w: 3.8, h: 2.9,
