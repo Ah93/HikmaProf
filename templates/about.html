@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About — HIKMAProf</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <style>
+        /* ── About page overrides ── */
+        .about-hero {
+            background: url('{{ url_for("static", filename="logo/hero_about.png") }}') center center / cover no-repeat;
+            padding: 140px 60px 80px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .about-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(29,45,92,0.65) 0%, rgba(15,26,56,0.7) 60%, rgba(26,58,58,0.6) 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .about-hero-logo {
+            margin-bottom: 0.4rem;
+        }
+        .about-hero h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.5px;
+            margin: 0 0 1rem;
+            line-height: 1.15;
+        }
+        .about-hero p {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.78);
+            max-width: 640px;
+            margin: 0 auto 2rem;
+            line-height: 1.7;
+        }
+        .about-hero-badges {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* ── Sections ── */
+        .about-section {
+            padding: 72px 60px;
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+        .about-section + .about-section {
+            border-top: 1px solid #f0f0f5;
+        }
+        .section-eyebrow {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #2AADA6;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            font-size: clamp(1.4rem, 2.5vw, 2rem);
+            font-weight: 800;
+            color: #1D2D5C;
+            letter-spacing: -0.3px;
+            margin: 0 0 16px;
+            line-height: 1.2;
+        }
+        .section-lead {
+            font-size: 1.05rem;
+            color: #4b5563;
+            line-height: 1.75;
+            max-width: 680px;
+            margin: 0 0 36px;
+        }
+
+        /* ── Feature list ── */
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-top: 8px;
+        }
+        .feature-item {
+            background: #f8f9ff;
+            border: 1.5px solid #e8ecf8;
+            border-radius: 14px;
+            padding: 22px 20px;
+        }
+        .feature-item-icon {
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+        .feature-item h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1D2D5C;
+            margin: 0 0 6px;
+        }
+        .feature-item p {
+            font-size: 13.5px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* ── Pedagogy cards ── */
+        .pedagogy-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 8px;
+        }
+        .pedagogy-card {
+            border-radius: 16px;
+            padding: 28px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .pedagogy-card--teal   { background: #f0fdfa; border: 1.5px solid #99f6e4; }
+        .pedagogy-card--navy   { background: #eef1fa; border: 1.5px solid #c7d0ee; }
+        .pedagogy-card--gold   { background: #fffbeb; border: 1.5px solid #fde68a; }
+        .pedagogy-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1D2D5C;
+            margin: 0 0 8px;
+        }
+        .pedagogy-card p {
+            font-size: 13.5px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .pedagogy-card-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #2AADA6;
+            margin-bottom: 6px;
+        }
+
+        /* ── Pipeline banner ── */
+        .pipeline-banner {
+            background: linear-gradient(135deg, #1D2D5C, #2AADA6);
+            border-radius: 20px;
+            padding: 40px 48px;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .pipeline-banner p {
+            color: rgba(255,255,255,0.75);
+            font-size: 14px;
+            margin: 0 0 20px;
+        }
+        .pipeline-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .pipeline-step {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 20px;
+            border-radius: 30px;
+        }
+        .pipeline-arrow {
+            color: rgba(255,255,255,0.5);
+            font-size: 18px;
+            font-weight: 300;
+        }
+
+        /* ── Ecosystem ── */
+        .ecosystem-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 8px;
+        }
+        .ecosystem-card {
+            background: #fff;
+            border: 1.5px solid #e8ecf8;
+            border-radius: 14px;
+            padding: 24px 20px;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .ecosystem-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(29,45,92,0.1); }
+        .ecosystem-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1D2D5C;
+            margin: 0 0 8px;
+        }
+        .ecosystem-card p {
+            font-size: 13.5px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .ecosystem-tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #2AADA6;
+            background: rgba(42,173,166,0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        /* ── Why it matters ── */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .why-item {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1.5px solid #e8ecf8;
+        }
+        .why-icon {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .why-item h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1D2D5C;
+            margin: 0 0 4px;
+        }
+        .why-item p {
+            font-size: 13.5px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.55;
+        }
+
+        /* ── Who it's for ── */
+        .audience-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .audience-card {
+            text-align: center;
+            background: #fff;
+            border: 1.5px solid #e8ecf8;
+            border-radius: 14px;
+            padding: 28px 16px;
+            transition: border-color 0.2s;
+        }
+        .audience-card:hover { border-color: #2AADA6; }
+        .audience-icon { font-size: 32px; margin-bottom: 10px; }
+        .audience-card h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1D2D5C;
+            margin: 0;
+        }
+
+        /* ── Vision band ── */
+        .vision-band {
+            background: #0f1a38;
+            padding: 80px 60px;
+            text-align: center;
+        }
+        .vision-band h2 {
+            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            font-weight: 800;
+            color: #fff;
+            margin: 0 0 16px;
+            letter-spacing: -0.3px;
+        }
+        .vision-band p {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.7);
+            max-width: 640px;
+            margin: 0 auto 32px;
+            line-height: 1.7;
+        }
+        .vision-cta {
+            display: inline-block;
+            background: linear-gradient(135deg, #2AADA6, #C09A45);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 14px 36px;
+            border-radius: 30px;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .vision-cta:hover { opacity: 0.88; }
+
+        /* ── Coloured bg sections ── */
+        .bg-light { background: #f8f9ff; }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .nav-link[href="{{ url_for('home') }}"] { display: inline-block !important; }
+            .pipeline-steps {
+                flex-direction: column;
+                align-items: center;
+            }
+            .pipeline-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        @media (max-width: 768px) {
+            .about-hero { padding: 120px 24px 60px; }
+            .about-section { padding: 48px 24px; }
+            .pedagogy-grid,
+            .ecosystem-grid { grid-template-columns: 1fr; }
+            .why-grid { grid-template-columns: 1fr; }
+            .audience-grid { grid-template-columns: repeat(2, 1fr); }
+            .vision-band { padding: 60px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Nav (same as home) -->
+    <nav class="nav" id="mainNav">
+        <a href="{{ url_for('home') }}" class="nav-logo">
+            <img id="navLogoHikmaProf" src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 80px; width: auto;">
+        </a>
+        <div class="nav-links">
+            <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+            <a href="{{ url_for('app_interface') }}" class="nav-link">Course Studio</a>
+            <a href="{{ url_for('app_interface') }}" class="nav-cta">Try it free</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="about-hero">
+        <div style="position:relative;z-index:1;">
+            <div class="about-hero-logo">
+                <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 160px; width: auto;">
+            </div>
+            <h1>AI-Powered Course Creation.<br>Built for Educators.</h1>
+            <p>
+                <a href="https://hikma.hbku.edu.qa" target="_blank" style="color:#2AADA6;text-decoration:none;font-weight:600;">HikmaTech</a> at
+                <a href="https://www.hbku.edu.qa/en/" target="_blank" style="color:#C09A45;text-decoration:none;font-weight:600;">Hamad Bin Khalifa University</a>
+            </p>
+            <div class="about-hero-badges">
+                <span class="badge">🎓 Academic-grade AI</span>
+                <span class="badge">📊 Slides &amp; Videos</span>
+                <span class="badge">🧠 Pedagogically Aligned</span>
+                <span class="badge">⚡ End-to-End Pipeline</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- From Content to Courses -->
+    <section class="about-section">
+        <div class="section-eyebrow">What We Do</div>
+        <h2 class="section-title">From Content to Complete Courses</h2>
+        <p class="section-lead">
+            HikmaProf is an AI-driven platform that transforms documents, ideas, and research into <strong>complete, classroom-ready courses</strong> — including slides, videos, assessments, and structured learning pathways.
+            Upload your material and HikmaProf builds the rest.
+        </p>
+        <div class="feature-list">
+            <div class="feature-item">
+                <div class="feature-item-icon">📊</div>
+                <h4>Professional Presentations</h4>
+                <p>Polished PPTX-ready slides generated directly from your source material.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-item-icon">🎥</div>
+                <h4>AI Lecture Videos</h4>
+                <p>Narrated video lectures with AI avatars — ready for any LMS or online platform.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-item-icon">🧠</div>
+                <h4>Structured Course Modules</h4>
+                <p>Learning pathways aligned with educational objectives, not just a list of slides.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-item-icon">📝</div>
+                <h4>Auto-Generated Assessments</h4>
+                <p>Questions, quizzes, and checks for understanding derived from your content.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-item-icon">📦</div>
+                <h4>Instant Export</h4>
+                <p>Download everything as PDF, PPTX, or MP4 video — immediately, in one click.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pedagogy -->
+    <section class="about-section bg-light">
+        <div class="section-eyebrow">Our Foundation</div>
+        <h2 class="section-title">Built on Real Pedagogy</h2>
+        <p class="section-lead">
+            HikmaProf doesn't just generate content — it enforces how learning should happen. Every output is <strong>instructionally sound, not just visually polished.</strong>
+        </p>
+        <div class="pedagogy-grid">
+            <div class="pedagogy-card pedagogy-card--teal">
+                <div class="pedagogy-card-label">Framework 1</div>
+                <h4><a href="https://en.wikipedia.org/wiki/Bloom%27s_taxonomy" target="_blank" style="color:#1D2D5C;text-decoration:none;border-bottom:1.5px solid #2AADA6;">Bloom's Taxonomy</a></h4>
+                <p>Depth across all cognitive levels — from foundational recall to critical analysis and creation.</p>
+            </div>
+            <div class="pedagogy-card pedagogy-card--navy">
+                <div class="pedagogy-card-label">Framework 2</div>
+                <h4><a href="https://en.wikipedia.org/wiki/Problem-based_learning" target="_blank" style="color:#1D2D5C;text-decoration:none;border-bottom:1.5px solid #2AADA6;">Problem-Based Learning</a></h4>
+                <p>Real-world scenarios and challenges woven into course structure to drive applied thinking.</p>
+            </div>
+            <div class="pedagogy-card pedagogy-card--gold">
+                <div class="pedagogy-card-label">Framework 3</div>
+                <h4><a href="https://en.wikipedia.org/wiki/Mastery_learning" target="_blank" style="color:#1D2D5C;text-decoration:none;border-bottom:1.5px solid #C09A45;">Mastery Learning</a></h4>
+                <p>Outcome-driven assessment ensuring learners achieve defined competencies before advancing.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Unified Pipeline -->
+    <section class="about-section">
+        <div class="section-eyebrow">One Platform</div>
+        <h2 class="section-title">Full Academic Workflow</h2>
+        <p class="section-lead">
+            HikmaProf replaces fragmented tools with a unified pipeline. Powered by AI, designed for scale.
+        </p>
+        <div class="pipeline-banner">
+            <p>One continuous, intelligent workflow — from raw material to delivered course</p>
+            <div class="pipeline-steps">
+                <span class="pipeline-step">Input</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">Structure</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">Teach</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">Assess</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">Improve</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- HIKMA Ecosystem -->
+    <section class="about-section bg-light">
+        <div class="section-eyebrow">Part of Something Bigger</div>
+        <h2 class="section-title">Part of the <a href="https://hikma.hbku.edu.qa" target="_blank" style="color:#2AADA6;text-decoration:none;">HikmaTech</a> Ecosystem</h2>
+        <p class="section-lead">
+            HikmaProf is a core module within a larger AI academic framework — all built under
+            <a href="https://hikma.hbku.edu.qa" target="_blank" style="color:#2AADA6;font-weight:600;text-decoration:none;">HikmaTech</a> at
+            <a href="https://www.hbku.edu.qa/en/" target="_blank" style="color:#1D2D5C;font-weight:600;text-decoration:none;">Hamad Bin Khalifa University</a>.
+            Together they form a <strong>fully AI-orchestrated academic ecosystem</strong>.
+        </p>
+        <div class="ecosystem-grid">
+            <div class="ecosystem-card">
+                <div class="ecosystem-tag">Research</div>
+                <a href="https://hikma.hbku.edu.qa/ai-scholar-frontier/" target="_blank">
+                    <img src="{{ url_for('static', filename='logo/logo_ai_scholar_frontier_color_trans.png') }}" alt="AI Scholar Frontier" style="height:96px;width:260px;object-fit:contain;margin-bottom:12px;display:block;">
+                </a>
+                <h4><a href="https://hikma.hbku.edu.qa/ai-scholar-frontier/" target="_blank" style="color:#1D2D5C;text-decoration:none;border-bottom:1.5px solid #2AADA6;">AI Scholar Frontier</a></h4>
+                <p>AI-powered research generation and verification — from question to validated output.</p>
+            </div>
+            <div class="ecosystem-card">
+                <div class="ecosystem-tag">Publishing</div>
+                <a href="https://hikma.hbku.edu.qa/hikmaxiv" target="_blank">
+                    <img src="{{ url_for('static', filename='logo/logo_hikmaXiv_color_trans.png') }}" alt="HikmaXiv" style="height:84px;width:220px;object-fit:contain;margin-bottom:12px;display:block;">
+                </a>
+                <h4><a href="https://hikma.hbku.edu.qa/hikmaxiv" target="_blank" style="color:#1D2D5C;text-decoration:none;border-bottom:1.5px solid #2AADA6;">HikmaXiv</a></h4>
+                <p>Academic publishing and dissemination — making knowledge accessible and citable.</p>
+            </div>
+            <div class="ecosystem-card">
+                <div class="ecosystem-tag">Identity</div>
+                <a href="https://hikma.hbku.edu.qa/aidoi" target="_blank">
+                    <img src="{{ url_for('static', filename='logo/logo_aidoi_color_trans_01.png') }}" alt="AIDOI" style="height:40px;width:120px;object-fit:contain;margin-top:16px;margin-bottom:28px;display:block;">
+                </a>
+                <h4><a href="https://hikma.hbku.edu.qa/aidoi" target="_blank" style="color:#1D2D5C;text-decoration:none;border-bottom:1.5px solid #2AADA6;">AIDOI</a></h4>
+                <p>Traceable knowledge identity — ensuring authorship, integrity, and provenance of AI-generated content.</p>
+            </div>
+        </div>
+        <div style="text-align:center;margin-top:28px;">
+            <img src="{{ url_for('static', filename='logo/logo_hikma_wht.png') }}" alt="HikmaTech" style="height:60px;width:auto;filter:brightness(0) invert(0.3) sepia(1) saturate(3) hue-rotate(175deg);">
+        </div>
+    </section>
+
+    <!-- Why it matters -->
+    <section class="about-section">
+        <div class="section-eyebrow">The Impact</div>
+        <h2 class="section-title">Why It Matters</h2>
+        <div class="why-grid">
+            <div class="why-item">
+                <div class="why-icon">⚡</div>
+                <div>
+                    <h4>Create Faster</h4>
+                    <p>Hours instead of weeks — from raw document to complete course in a single session.</p>
+                </div>
+            </div>
+            <div class="why-item">
+                <div class="why-icon">📏</div>
+                <div>
+                    <h4>Standardize Quality</h4>
+                    <p>Built-in <a href="https://en.wikipedia.org/wiki/Instructional_design" target="_blank" style="color:#2AADA6;">instructional design</a> principles ensure every course meets academic standards.</p>
+                </div>
+            </div>
+            <div class="why-item">
+                <div class="why-icon">🌍</div>
+                <div>
+                    <h4>Scale Globally</h4>
+                    <p>Deploy courses anywhere — export formats compatible with all major <a href="https://en.wikipedia.org/wiki/Learning_management_system" target="_blank" style="color:#2AADA6;">LMS</a> platforms.</p>
+                </div>
+            </div>
+            <div class="why-item">
+                <div class="why-icon">🤖</div>
+                <div>
+                    <h4>AI-Native Learning</h4>
+                    <p>Beyond static content — courses that are structured, delivered, and continuously improved by AI.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Who it's for -->
+    <section class="about-section bg-light">
+        <div class="section-eyebrow">Our Users</div>
+        <h2 class="section-title">Who It's For</h2>
+        <div class="audience-grid">
+            <div class="audience-card">
+                <div class="audience-icon">🏛️</div>
+                <h4>Universities &amp; Institutions</h4>
+            </div>
+            <div class="audience-card">
+                <div class="audience-icon">👩‍🏫</div>
+                <h4>Educators &amp; Trainers</h4>
+            </div>
+            <div class="audience-card">
+                <div class="audience-icon">🔬</div>
+                <h4>Researchers &amp; Content Creators</h4>
+            </div>
+            <div class="audience-card">
+                <div class="audience-icon">📚</div>
+                <h4>Professional Learning Programs</h4>
+            </div>
+        </div>
+    </section>
+
+    <!-- Vision -->
+    <div class="vision-band">
+        <h2>The Vision</h2>
+        <p>
+            HikmaProf is part of a larger shift toward
+            <a href="https://en.wikipedia.org/wiki/Artificial_intelligence_in_education" target="_blank" style="color:#2AADA6;font-weight:600;text-decoration:none;">AI-driven education systems</a>
+            — where knowledge is not just created, but intelligently structured, delivered, and continuously improved.
+        </p>
+        <a href="{{ url_for('app_interface') }}" class="vision-cta">Start Creating Your Course →</a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-top">
+                <div class="footer-logo">
+                    <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 90px; width: auto;">
+                </div>
+                <div class="footer-links" style="align-items:center;">
+                    <a href="{{ url_for('home') }}">Home</a>
+                    <a href="{{ url_for('app_interface') }}">Course Studio</a>
+                    <a href="https://hikma.hbku.edu.qa" target="_blank" style="display:inline-flex;align-items:center;margin-left:16px;">
+                        <img src="{{ url_for('static', filename='logo/logo_hikma_wht.png') }}" alt="HikmaTech" style="height: 90px; width: auto; filter: brightness(0) invert(1);">
+                    </a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copy">© 2026 All Rights Reserved by <a href="https://hikma.hbku.edu.qa" target="_blank" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">HikmaTech Innovations</a> at <a href="https://www.hbku.edu.qa/en/" target="_blank" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">Hamad Bin Khalifa University</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const nav = document.getElementById('mainNav');
+        const logoHikmaProf = document.getElementById('navLogoHikmaProf');
+        const logoWht = '{{ url_for("static", filename="logo/logo_hikmaprof_wht.png") }}';
+        const logoColor = '{{ url_for("static", filename="logo/logo_hikmaprof_color_trans.png") }}';
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY > 30;
+            nav.classList.toggle('scrolled', scrolled);
+            logoHikmaProf.src = scrolled ? logoColor : logoWht;
+        });
+    </script>
+</body>
+</html>

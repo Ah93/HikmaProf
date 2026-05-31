@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIKMAProf — Research to Slides in Minutes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+</head>
+<body>
+
+    <!-- Nav -->
+    <nav class="nav" id="mainNav">
+        <a href="{{ url_for('home') }}" class="nav-logo">
+            <img id="navLogoHikmaProf" src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 80px; width: auto;">
+        </a>
+        <div class="nav-links">
+            <a href="{{ url_for('about') }}" class="nav-link">About</a>
+            <a href="{{ url_for('app_interface') }}" class="nav-link">Course Studio</a>
+            <a href="{{ url_for('app_interface') }}" class="nav-cta">Try it free</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <!-- Decorative blobs -->
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+
+        <div class="hero-inner">
+            <div class="hero-left">
+                <div class="hero-pill">
+                    <span class="pill-dot"></span>
+                    Developed under the <a href="https://hikma.hbku.edu.qa" target="_blank" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">HikmaTech</a> Initiative at <a href="https://www.hbku.edu.qa/en/" target="_blank" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">HBKU</a>
+                </div>
+                <h1 class="hero-title"><span style="color:#2AADA6;">Teach Smarter.</span> <span style="color:#C09A45;">Learn Deeper.</span><br><span style="color:#ffffff;">Scale Infinitely.</span></h1>
+                <p class="hero-sub">End-to-end AI learning orchestration.<br>Ingest content, structure it into pedagogically aligned modules, generate lectures and assessments, and track mastery within a unified intelligent pipeline.</p>
+
+                <div class="hero-actions">
+                    <a href="{{ url_for('app_interface') }}" class="btn-hero-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Start Generating Your Course
+                    </a>
+                </div>
+
+                <div class="hero-formats">
+                    <span class="format-tag">PDF</span>
+                    <span class="format-tag">DOCX</span>
+                    <span class="format-tag">LaTeX</span>
+                    <span class="format-note">No account needed</span>
+                </div>
+            </div>
+
+            <div class="hero-right">
+                <div style="text-align: center; margin-bottom: 0.4rem;">
+                    <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 200px; width: auto;">
+                </div>
+                <div class="slide-mockup">
+                    <div class="mockup-bar">
+                        <div class="mockup-dots">
+                            <i></i><i></i><i></i>
+                        </div>
+                        <div class="mockup-label" style="display:flex;align-items:center;gap:6px;">
+                            <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height:32px;width:auto;">
+                            <span>— generating…</span>
+                        </div>
+                    </div>
+                    <div class="mockup-body">
+                        <!-- Slide 1 preview -->
+                        <div class="slide-card slide-card--main">
+                            <div class="sc-eyebrow"></div>
+                            <div class="sc-title"></div>
+                            <div class="sc-lines">
+                                <div class="sc-line" style="width:85%"></div>
+                                <div class="sc-line" style="width:70%"></div>
+                                <div class="sc-line" style="width:78%"></div>
+                            </div>
+                            <div class="sc-badge">Title Slide</div>
+                        </div>
+                        <!-- Stacked behind cards -->
+                        <div class="slide-card slide-card--back2">
+                            <div class="sc-line" style="width:60%"></div>
+                            <div class="sc-line" style="width:45%"></div>
+                        </div>
+                        <div class="slide-card slide-card--back1">
+                            <div class="sc-line" style="width:72%"></div>
+                            <div class="sc-line" style="width:55%"></div>
+                        </div>
+                    </div>
+                    <div class="mockup-footer">
+                        <div class="mockup-progress">
+                            <div class="mp-bar"><div class="mp-fill"></div></div>
+                        </div>
+                        <span class="mockup-status">Slide 1 of 12 ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow -->
+    <section class="steps-section">
+        <div class="steps-inner">
+            <img src="{{ url_for('static', filename='logo/card_workflow.png') }}" alt="HIKMAProf Workflow" style="width:100%;max-width:1000px;height:auto;display:block;margin:0 auto;">
+        </div>
+    </section>
+
+    <!-- Features — warm 3-col grid -->
+    <section class="features">
+        <div class="feat-inner">
+            <h2 class="feat-title">Beyond Content Creation — Full Learning Intelligence</h2>
+            <p class="feat-sub">An AI system that structures, delivers, and evaluates education end-to-end.</p>
+
+            <div class="feat-grid">
+                <div class="feat-card feat-card--purple">
+                    <div class="feat-icon"><img src="{{ url_for('static', filename='logo/card_templates.png') }}" alt="Templates"></div>
+                    <div class="feat-card-body">
+                        <h3>8 Modern Templates</h3>
+                        <p>Minimal, corporate, elegant, tech — all template backgrounds are clean and professionally designed.</p>
+                    </div>
+                </div>
+                <div class="feat-card feat-card--blue">
+                    <div class="feat-icon"><img src="{{ url_for('static', filename='logo/card_structure.png') }}" alt="AI Structure"></div>
+                    <div class="feat-card-body">
+                        <h3>AI Structures Your Content</h3>
+                        <p>Extracts key findings, methodology, and conclusions from your paper automatically.</p>
+                    </div>
+                </div>
+                <div class="feat-card feat-card--teal">
+                    <div class="feat-icon"><img src="{{ url_for('static', filename='logo/card_narration.png') }}" alt="Narration"></div>
+                    <div class="feat-card-body">
+                        <h3>Optional Narrated Video</h3>
+                        <p>Add an AI avatar and voice narration to turn your slides into a complete video lecture.</p>
+                    </div>
+                </div>
+                <div class="feat-card feat-card--amber">
+                    <div class="feat-icon"><img src="{{ url_for('static', filename='logo/card_edit.png') }}" alt="Edit"></div>
+                    <div class="feat-card-body">
+                        <h3>Edit Before You Export</h3>
+                        <p>Review the slide plan, tweak titles and bullets, then generate with a single click.</p>
+                    </div>
+                </div>
+                <div class="feat-card feat-card--rose">
+                    <div class="feat-icon"><img src="{{ url_for('static', filename='logo/card_file.png') }}" alt="File Formats"></div>
+                    <div class="feat-card-body">
+                        <h3>PDF · DOCX · LaTeX</h3>
+                        <p>All major academic formats supported, including complex LaTeX papers with equations.</p>
+                    </div>
+                </div>
+                <div class="feat-card feat-card--green">
+                    <div class="feat-icon"><img src="{{ url_for('static', filename='logo/card_download.png') }}" alt="Download"></div>
+                    <div class="feat-card-body">
+                        <h3>Download Instantly</h3>
+                        <p>Get your PPTX, PDF export, or MP4 video — all available for immediate download.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Banner -->
+    <section class="cta-band">
+        <div class="cta-band-inner">
+            <h2>Start building your complete course with AI</h2>
+            <p>From content to classroom-ready delivery — structured, aligned, and ready in minutes.<br>No setup. Just start building.</p>
+            <a href="{{ url_for('app_interface') }}" style="display:inline-block;background:linear-gradient(135deg,#2AADA6,#C09A45);color:#fff;font-size:15px;font-weight:700;padding:14px 36px;border-radius:30px;text-decoration:none;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">Start Generating Your Course →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-top">
+                <div class="footer-logo">
+                    <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf" style="height: 90px; width: auto;">
+                </div>
+                <div class="footer-links" style="align-items:center;">
+                    <a href="{{ url_for('about') }}">About</a>
+                    <a href="{{ url_for('app_interface') }}">Course Studio</a>
+                    <a href="https://hikma.hbku.edu.qa" target="_blank" style="display:inline-flex;align-items:center;margin-left:16px;">
+                        <img src="{{ url_for('static', filename='logo/logo_hikma_wht.png') }}" alt="HikmaTech" style="height: 90px; width: auto; filter: brightness(0) invert(1);">
+                    </a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copy">© 2026 All Rights Reserved by <a href="https://hikma.hbku.edu.qa" target="_blank" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">HikmaTech Innovations</a> at <a href="https://www.hbku.edu.qa/en/" target="_blank" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">Hamad Bin Khalifa University</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const nav = document.getElementById('mainNav');
+        const logoHikmaProf = document.getElementById('navLogoHikmaProf');
+        const logoWht = '{{ url_for("static", filename="logo/logo_hikmaprof_wht.png") }}';
+        const logoColor = '{{ url_for("static", filename="logo/logo_hikmaprof_color_trans.png") }}';
+
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY > 30;
+            nav.classList.toggle('scrolled', scrolled);
+            logoHikmaProf.src = scrolled ? logoColor : logoWht;
+        });
+    </script>
+</body>
+</html>

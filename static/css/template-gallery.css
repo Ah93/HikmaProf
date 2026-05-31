@@ -1,0 +1,1074 @@
+/* ============================================
+   TEMPLATE GALLERY — 8 Curated Templates
+   Decorations: solid bars, horizontal rules,
+   line grids only. Zero shapes.
+   ============================================ */
+
+/* ─── Section Wrapper ─── */
+#templateGallerySection {
+    margin: 2rem 0;
+    padding: 2rem 2rem 2.5rem;
+    background: #fafbff;
+    border-radius: 18px;
+    border: 1px solid #e8ecff;
+}
+
+#toggleTemplateGallery {
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(to right, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    margin-bottom: 2rem;
+    letter-spacing: 0.01em;
+}
+
+#toggleTemplateGallery:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* ─── Gallery Header ─── */
+.gallery-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.gallery-header h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e1b4b;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.025em;
+}
+
+.gallery-header p {
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+/* ─── Grid: 6 columns, responsive ─── */
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.65rem;
+}
+
+/* ============================================
+   TEMPLATE CARD
+   ============================================ */
+.template-card {
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 3px 10px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid #f1f5f9;
+}
+
+.template-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.11);
+}
+
+.template-card.selected {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.13), 0 8px 20px rgba(99,102,241,0.1);
+}
+
+/* ============================================
+   SLIDE MOCKUP — base layout
+   ============================================ */
+.template-preview {
+    height: 110px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Full-size absolute layer for the slide content */
+.tp-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Decoration: a solid rectangle — never a shape */
+.tp-decoration {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    /* No background by default — each template sets it */
+}
+
+/* Thin accent rule above the title */
+.tp-eyebrow {
+    height: 2px;
+    width: 24px;
+    border-radius: 1px;
+    background: rgba(255,255,255,0.5);
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.tp-header {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    overflow: hidden;
+    padding-right: 4px; /* prevent text touching edge */
+}
+
+/* Title: hard-clamped, never overflows */
+.tp-title-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-width: 100%;
+    word-break: break-word;
+}
+
+.tp-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+    padding-right: 4px;
+}
+
+/* Fake content lines */
+.tp-line {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.25);
+    flex-shrink: 0;
+}
+.tp-line-1 { width: 76%; }
+.tp-line-2 { width: 60%; }
+.tp-line-3 { width: 44%; }
+
+/* ─── Card Info Strip ─── */
+.template-info {
+    padding: 0.45rem 0.65rem;
+    border-top: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+.template-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.template-description {
+    font-size: 0.62rem;
+    color: #94a3b8;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Selected Badge ─── */
+.template-selected-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #6366f1;
+    color: white;
+    padding: 0.22rem 0.55rem;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.5);
+    white-space: nowrap;
+}
+
+/* ============================================
+   8 TEMPLATE DESIGNS
+   Only: solid bars, horizontal rules, line grids.
+   No diagonal gradients with hard stops.
+   No clip-path. No border-radius shapes.
+   ============================================ */
+
+/* ── 1. MODERN ───────────────────────────────
+   Deep indigo, bold left bar + right bar + top/bottom rules + tint panel */
+.template-card[data-template-id="modern"] .template-preview {
+    background:
+        /* right bar */
+        linear-gradient(to left, rgba(165,180,252,0.45) 0px, rgba(165,180,252,0.45) 3px, transparent 3px),
+        /* top rule */
+        linear-gradient(to bottom, rgba(165,180,252,0.5) 0px, rgba(165,180,252,0.5) 6px, transparent 6px,
+            transparent calc(100% - 5px), rgba(99,102,241,0.55) calc(100% - 5px)),
+        /* left tint panel */
+        linear-gradient(to right, rgba(165,180,252,0.12) 0px, rgba(165,180,252,0.12) 38px, transparent 38px),
+        /* base */
+        linear-gradient(to bottom, #2e1a82, #4338ca);
+}
+.template-card[data-template-id="modern"] .tp-decoration {
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: #a5b4fc;
+    box-shadow: 2px 0 0 rgba(165,180,252,0.3);
+}
+.template-card[data-template-id="modern"] .tp-slide {
+    padding-left: 22px;
+}
+.template-card[data-template-id="modern"] .tp-eyebrow {
+    background: #a5b4fc;
+    width: 22px;
+}
+.template-card[data-template-id="modern"] .tp-line {
+    background: rgba(165,180,252,0.38);
+}
+
+/* ── 2. MINIMAL ──────────────────────────────
+   Pure white, top+bottom rules, left corner accent, right thin rule */
+.template-card[data-template-id="minimal"] .template-preview {
+    background:
+        /* right thin rule */
+        linear-gradient(to left, rgba(15,23,42,0.1) 0px, rgba(15,23,42,0.1) 2px, transparent 2px),
+        /* bottom rule */
+        linear-gradient(to top, rgba(15,23,42,0.15) 0px, rgba(15,23,42,0.15) 3px, transparent 3px),
+        #ffffff;
+}
+.template-card[data-template-id="minimal"] .tp-decoration {
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: #0f172a;
+    box-shadow: 0 18px 0 rgba(15,23,42,0.06); /* sub-header shadow rule */
+}
+.template-card[data-template-id="minimal"] .tp-slide {
+    padding-top: 18px;
+}
+.template-card[data-template-id="minimal"] .tp-eyebrow {
+    background: rgba(15,23,42,0.2);
+    height: 1px;
+    width: 18px;
+}
+.template-card[data-template-id="minimal"] .tp-title-text {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-shadow: none;
+}
+.template-card[data-template-id="minimal"] .tp-line {
+    background: #dde3ec;
+    height: 3px;
+}
+
+/* ── 3. TECH ─────────────────────────────────
+   Near-black, green grid + left bar + bottom status + right indicators */
+.template-card[data-template-id="tech"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, rgba(34,197,94,0.85) 0px, rgba(34,197,94,0.85) 4px, transparent 4px),
+        /* bottom status bar */
+        linear-gradient(to top, rgba(34,197,94,0.45) 0px, rgba(34,197,94,0.45) 7px, transparent 7px),
+        #030712;
+}
+.template-card[data-template-id="tech"] .tp-decoration {
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(34,197,94,0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,0.12) 1px, transparent 1px);
+    background-size: 15px 15px;
+    /* Right edge stacked indicator blocks via box-shadow */
+    box-shadow:
+        inset -6px -16px 0 -4px rgba(34,197,94,0.45),
+        inset -6px -28px 0 -4px rgba(34,197,94,0.35),
+        inset -6px -40px 0 -4px rgba(34,197,94,0.25);
+}
+.template-card[data-template-id="tech"] .tp-slide {
+    padding-left: 22px;
+}
+.template-card[data-template-id="tech"] .tp-eyebrow {
+    background: #22c55e;
+    height: 2px;
+    width: 16px;
+}
+.template-card[data-template-id="tech"] .tp-title-text {
+    color: #22c55e;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(34,197,94,0.4);
+}
+.template-card[data-template-id="tech"] .tp-line {
+    background: rgba(34,197,94,0.28);
+    height: 3px;
+}
+
+/* ── 4. CREATIVE ─────────────────────────────
+   Rose-orange, top block + right column + left sub-bar + bottom rule */
+.template-card[data-template-id="creative"] .template-preview {
+    background:
+        /* top color block */
+        linear-gradient(to bottom, rgba(225,29,72,0.75) 0px, rgba(225,29,72,0.75) 32px, transparent 32px),
+        /* bottom accent bar */
+        linear-gradient(to top, rgba(249,115,22,0.65) 0px, rgba(249,115,22,0.65) 6px, transparent 6px),
+        /* left sub-bar */
+        linear-gradient(to right, rgba(255,255,255,0.22) 0px, rgba(255,255,255,0.22) 8px, transparent 8px),
+        /* base */
+        linear-gradient(to bottom, #e11d48, #f97316);
+}
+.template-card[data-template-id="creative"] .tp-decoration {
+    right: 0; top: 0; bottom: 0;
+    width: 16px;
+    background: rgba(255,255,255,0.15);
+    border-left: 2px solid rgba(255,255,255,0.35);
+    box-shadow:
+        inset 0 -48px 0 -12px rgba(255,255,255,0.18),
+        inset 0 -80px 0 -12px rgba(255,255,255,0.12);
+}
+.template-card[data-template-id="creative"] .tp-slide {
+    padding-top: 40px;
+}
+.template-card[data-template-id="creative"] .tp-eyebrow {
+    display: none;
+}
+.template-card[data-template-id="creative"] .tp-title-text {
+    font-size: 14px;
+    font-weight: 800;
+}
+.template-card[data-template-id="creative"] .tp-line {
+    background: rgba(255,255,255,0.42);
+    height: 5px;
+    border-radius: 3px;
+}
+
+/* ── 5. CORPORATE ────────────────────────────
+   Dark navy + left bar + top rule + right tint + bottom panel */
+.template-card[data-template-id="corporate"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, #2563eb 0px, #2563eb 5px, transparent 5px),
+        /* top rule */
+        linear-gradient(to bottom, #2563eb 0px, #2563eb 6px, transparent 6px),
+        /* right panel tint */
+        linear-gradient(to left, rgba(37,99,235,0.12) 0px, rgba(37,99,235,0.12) 30%, transparent 30%),
+        #0c1628;
+}
+.template-card[data-template-id="corporate"] .tp-decoration {
+    left: 0; right: 0; bottom: 0;
+    height: 36%;
+    background: #172036;
+    border-top: 2px solid #2563eb;
+    box-shadow: inset 0 0 0 0 transparent, -3px 0 0 0 rgba(37,99,235,0.4) inset;
+}
+.template-card[data-template-id="corporate"] .tp-slide {
+    padding-left: 20px;
+    padding-top: 20px;
+}
+.template-card[data-template-id="corporate"] .tp-eyebrow {
+    background: #2563eb;
+    height: 2px;
+    width: 20px;
+}
+.template-card[data-template-id="corporate"] .tp-line {
+    background: rgba(100,116,139,0.38);
+}
+
+/* ── 6. ELEGANT ──────────────────────────────
+   Near-black, double gold border frame + corner ornaments */
+.template-card[data-template-id="elegant"] .template-preview {
+    background:
+        /* top gold rule */
+        linear-gradient(to bottom, rgba(212,175,55,0.6) 0px, rgba(212,175,55,0.6) 2px, transparent 2px),
+        /* bottom gold rule */
+        linear-gradient(to top, rgba(212,175,55,0.35) 0px, rgba(212,175,55,0.35) 2px, transparent 2px),
+        /* warm inner tint */
+        rgba(255,248,220,0.06),
+        #14110f;
+}
+.template-card[data-template-id="elegant"] .tp-decoration {
+    left: 10px; right: 10px; top: 8px; bottom: 8px;
+    border: 1px solid rgba(212,175,55,0.45);
+    /* Second inner border via box-shadow */
+    box-shadow:
+        inset 0 0 0 3px rgba(20,17,15,1), /* gap */
+        inset 0 0 0 4px rgba(212,175,55,0.2); /* second inner border */
+}
+.template-card[data-template-id="elegant"] .tp-slide {
+    padding: 26px 22px 20px;
+}
+.template-card[data-template-id="elegant"] .tp-eyebrow {
+    background: rgba(212,175,55,0.55);
+    height: 1px;
+    width: 28px;
+    border-radius: 0;
+}
+.template-card[data-template-id="elegant"] .tp-title-text {
+    color: #fde68a;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-shadow: none;
+}
+.template-card[data-template-id="elegant"] .tp-line {
+    background: rgba(212,175,55,0.22);
+    height: 3px;
+}
+
+/* ── 7. STARTUP ──────────────────────────────
+   Orange→pink, left bar + dual bottom bands + right energy meter */
+.template-card[data-template-id="startup"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 5px, transparent 5px),
+        /* top rule */
+        linear-gradient(to bottom, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 5px, transparent 5px),
+        /* base */
+        linear-gradient(to bottom, #f97316, #db2777);
+}
+.template-card[data-template-id="startup"] .tp-decoration {
+    left: 0; right: 0; bottom: 0;
+    height: 12px;
+    background: rgba(255,255,255,0.18);
+    border-top: 2px solid rgba(255,255,255,0.35);
+    /* Right energy meter bars via box-shadow */
+    box-shadow:
+        inset -6px 0 0 -2px rgba(255,255,255,0.4),
+        inset -14px 0 0 -2px rgba(255,255,255,0.3),
+        inset -22px 0 0 -2px rgba(255,255,255,0.22),
+        inset -30px 0 0 -2px rgba(255,255,255,0.14);
+}
+.template-card[data-template-id="startup"] .tp-slide {
+    padding-left: 22px;
+}
+.template-card[data-template-id="startup"] .tp-eyebrow {
+    background: rgba(255,255,255,0.8);
+    height: 2px;
+    width: 22px;
+}
+.template-card[data-template-id="startup"] .tp-title-text {
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+.template-card[data-template-id="startup"] .tp-line {
+    background: rgba(255,255,255,0.42);
+    height: 5px;
+    border-radius: 3px;
+}
+
+/* ── 8. MAGAZINE ─────────────────────────────
+   Near-black, red bars (top/bottom/left/right) + editorial column */
+.template-card[data-template-id="magazine"] .template-preview {
+    background:
+        /* left accent bar */
+        linear-gradient(to right, #ef4444 0px, #ef4444 4px, transparent 4px),
+        /* right accent bar */
+        linear-gradient(to left, rgba(239,68,68,0.55) 0px, rgba(239,68,68,0.55) 4px, transparent 4px),
+        /* bottom rule */
+        linear-gradient(to top, #ef4444 0px, #ef4444 4px, transparent 4px),
+        /* editorial column */
+        linear-gradient(to right, transparent 38%, rgba(239,68,68,0.15) 38%, rgba(239,68,68,0.15) calc(38% + 1px), transparent calc(38% + 1px)),
+        #0a0a0a;
+}
+.template-card[data-template-id="magazine"] .tp-decoration {
+    left: 0; right: 0; top: 0;
+    height: 5px;
+    background: #ef4444;
+    box-shadow: 0 6px 0 rgba(239,68,68,0.2); /* inner sub-rule */
+}
+.template-card[data-template-id="magazine"] .tp-slide {
+    padding: 18px 18px 12px 20px;
+}
+.template-card[data-template-id="magazine"] .tp-eyebrow {
+    background: #ef4444;
+    height: 2px;
+    width: 14px;
+    border-radius: 0;
+}
+.template-card[data-template-id="magazine"] .tp-title-text {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+}
+.template-card[data-template-id="magazine"] .tp-line {
+    background: rgba(255,255,255,0.16);
+    height: 3px;
+}
+
+/* ============================================
+   COLOR GALLERY
+   ============================================ */
+#colorGallery {
+    margin-top: 0.5rem;
+}
+
+.color-category {
+    margin-bottom: 1.75rem;
+}
+
+.color-category-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.65rem;
+}
+
+.color-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.color-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(0,0,0,0.11);
+}
+
+.color-card.selected {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.14);
+}
+
+.color-preview {
+    height: 52px;
+    width: 100%;
+}
+
+.color-name {
+    padding: 0.4rem 0.55rem;
+    text-align: center;
+    font-size: 0.68rem;
+    color: #475569;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.color-selected-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #6366f1;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    box-shadow: 0 2px 5px rgba(99,102,241,0.45);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+    .template-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .template-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #templateGallerySection {
+        padding: 1.25rem;
+    }
+
+    .template-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .color-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+}
+
+/* ── 9. ACADEMIC ─────────────────────────────
+   Navy header strip, warm cream body, maroon bottom rule */
+.template-card[data-template-id="academic"] .template-preview {
+    background:
+        linear-gradient(to bottom, #1e3a5f 0px, #1e3a5f 32px, transparent 32px),
+        linear-gradient(to top, #7c2d12 0px, #7c2d12 4px, transparent 4px),
+        linear-gradient(to right, rgba(30,58,95,0.15) 0px, rgba(30,58,95,0.15) 3px, transparent 3px),
+        #f5f0e8;
+}
+.template-card[data-template-id="academic"] .tp-decoration {
+    left: 0; right: 0; top: 32px;
+    height: 2px;
+    background: #8b5a2b;
+}
+.template-card[data-template-id="academic"] .tp-slide { padding-top: 8px; }
+.template-card[data-template-id="academic"] .tp-eyebrow { background: rgba(255,255,255,0.55); height: 2px; width: 18px; }
+.template-card[data-template-id="academic"] .tp-line {
+    background: rgba(30,58,95,0.2);
+    height: 3px;
+}
+
+/* ── 10. NATURE ──────────────────────────────
+   Deep forest green, horizontal leaf-rule lines, white accents */
+.template-card[data-template-id="nature"] .template-preview {
+    background:
+        linear-gradient(to right, rgba(255,255,255,0.22) 0px, rgba(255,255,255,0.22) 4px, transparent 4px),
+        linear-gradient(to bottom, rgba(255,255,255,0.15) 0px, rgba(255,255,255,0.15) 4px, transparent 4px),
+        linear-gradient(to top, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 5px, transparent 5px),
+        #166534;
+}
+.template-card[data-template-id="nature"] .tp-decoration {
+    inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 100% 16px;
+}
+.template-card[data-template-id="nature"] .tp-slide { padding-left: 18px; }
+.template-card[data-template-id="nature"] .tp-eyebrow { background: rgba(255,255,255,0.65); }
+.template-card[data-template-id="nature"] .tp-line { background: rgba(255,255,255,0.32); }
+
+/* ── 11. RETRO ───────────────────────────────
+   Warm amber, thick dark-brown border frame, inner rule */
+.template-card[data-template-id="retro"] .template-preview {
+    background:
+        linear-gradient(to right,  #92400e 0px, #92400e 7px, transparent 7px),
+        linear-gradient(to left,   #92400e 0px, #92400e 7px, transparent 7px),
+        linear-gradient(to bottom, #92400e 0px, #92400e 7px, transparent 7px),
+        linear-gradient(to top,    #92400e 0px, #92400e 7px, transparent 7px),
+        #fbbf24;
+}
+.template-card[data-template-id="retro"] .tp-decoration {
+    left: 14px; right: 14px; top: 14px; bottom: 14px;
+    border: 2px solid rgba(146,64,14,0.4);
+    box-shadow: inset 0 0 0 1px rgba(146,64,14,0.2);
+}
+.template-card[data-template-id="retro"] .tp-slide { padding: 22px 20px 14px; }
+.template-card[data-template-id="retro"] .tp-eyebrow { background: rgba(146,64,14,0.55); height: 2px; }
+.template-card[data-template-id="retro"] .tp-title-text {
+    color: #431407;
+    font-weight: 900;
+    font-size: 12px;
+    text-shadow: none;
+}
+.template-card[data-template-id="retro"] .tp-line {
+    background: rgba(146,64,14,0.28);
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* ── 12. LUXURY ──────────────────────────────
+   Near-black, thick gold left bar + thin top/bottom rules, gold title */
+.template-card[data-template-id="luxury"] .template-preview {
+    background:
+        linear-gradient(to right,  rgba(212,175,55,0.95) 0px, rgba(212,175,55,0.95) 5px, transparent 5px),
+        linear-gradient(to bottom, rgba(212,175,55,0.5)  0px, rgba(212,175,55,0.5)  3px, transparent 3px),
+        linear-gradient(to top,    rgba(212,175,55,0.5)  0px, rgba(212,175,55,0.5)  3px, transparent 3px),
+        #0c0c0c;
+}
+.template-card[data-template-id="luxury"] .tp-decoration {
+    left: 18px; right: 18px;
+    top: 50%; transform: translateY(-50%);
+    height: 1px;
+    background: rgba(212,175,55,0.28);
+    box-shadow: 0 3px 0 rgba(212,175,55,0.12);
+}
+.template-card[data-template-id="luxury"] .tp-slide { padding-left: 20px; padding-top: 18px; }
+.template-card[data-template-id="luxury"] .tp-eyebrow { background: rgba(212,175,55,0.7); height: 1px; border-radius: 0; width: 20px; }
+.template-card[data-template-id="luxury"] .tp-title-text {
+    color: #d4af37;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    text-shadow: 0 0 8px rgba(212,175,55,0.4);
+}
+.template-card[data-template-id="luxury"] .tp-line { background: rgba(212,175,55,0.25); }
+
+/* ============================================
+   SELECTED TEMPLATE DISPLAY BAR (collapsed summary)
+   ============================================ */
+.selected-template-display {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-radius: 12px;
+    padding: 11px 16px;
+    margin-bottom: 14px;
+    color: white;
+    transition: border-radius 0.25s ease, margin-bottom 0.25s ease;
+}
+
+/* When gallery is open, remove bottom radius so it flows into the gallery */
+.selected-template-display.gallery-is-open {
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+}
+
+.selected-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selected-label {
+    font-weight: 600;
+    font-size: 13px;
+    opacity: 0.9;
+    white-space: nowrap;
+}
+
+.selected-template-name,
+.selected-color-name {
+    font-weight: 700;
+    font-size: 12.5px;
+    background: rgba(255,255,255,0.18);
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.selected-divider {
+    opacity: 0.35;
+    font-size: 16px;
+}
+
+.change-template-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.28);
+    color: white;
+    padding: 5px 13px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    transition: background 0.18s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+.change-template-btn svg {
+    transition: transform 0.25s ease;
+}
+.change-template-btn:hover { background: rgba(255,255,255,0.28); }
+
+/* ── Gallery collapse/expand animation ── */
+#templateGallerySection {
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    border: 1px solid #e5e7eb;
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    margin-bottom: 14px;
+    background: #fff;
+    padding: 0 20px;
+    max-height: 0;
+}
+#templateGallerySection.gallery-open {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 9999px;
+    padding: 20px;
+}
+
+/* ── Gallery header — centered ── */
+.gallery-header {
+    text-align: center;
+    padding: 8px 0 20px;
+}
+.gallery-header h2 {
+    margin: 0 0 4px;
+}
+.gallery-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13.5px;
+}
+
+/* ============================================
+   GALLERY TAB BAR
+   ============================================ */
+.gallery-tab-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.gallery-tab-btn {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.gallery-tab-btn:hover {
+    background: rgba(255,255,255,0.7);
+    color: #334155;
+}
+
+.gallery-tab-btn.active {
+    background: #ffffff;
+    color: #1e1b4b;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.tab-badge {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 20px;
+    letter-spacing: 0.03em;
+}
+
+/* ============================================
+   SLIDEV INTRO BANNER
+   ============================================ */
+.slidev-pane-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 1.5rem;
+    font-size: 0.87rem;
+    color: #3730a3;
+    line-height: 1.5;
+}
+
+.slidev-intro-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   SLIDEV THEME CARDS
+   ============================================ */
+.slidev-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.slidev-theme-card {
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid #f1f5f9;
+}
+
+.slidev-theme-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+}
+
+.slidev-theme-card.selected {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.14), 0 8px 22px rgba(99,102,241,0.12);
+}
+
+/* ── Slide mini-preview ── */
+.slidev-preview {
+    position: relative;
+    height: 90px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px 8px;
+    gap: 5px;
+}
+
+.stp-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 0;
+}
+
+.stp-title {
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stp-line {
+    height: 5px;
+    border-radius: 3px;
+    width: 90%;
+}
+
+.stp-line-short {
+    width: 60%;
+}
+
+.stp-dot {
+    width: 18px;
+    height: 4px;
+    border-radius: 2px;
+    margin-top: auto;
+}
+
+/* ── Card info ── */
+.slidev-theme-info {
+    padding: 8px 10px 10px;
+}
+
+.slidev-theme-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.slidev-theme-desc {
+    font-size: 0.7rem;
+    color: #64748b;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .slidev-theme-grid { grid-template-columns: repeat(3, 1fr); }
+    .gallery-tab-btn { font-size: 0.82rem; padding: 0.5rem 0.7rem; }
+}
+
+/* ============================================
+   AI IMAGE COUNT SELECTOR
+   ============================================ */
+.image-count-selector {
+    display: flex;
+    gap: 12px;
+    margin-top: 0.5rem;
+}
+
+.img-count-btn {
+    flex: 1;
+    max-width: 120px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+}
+
+.img-count-btn:hover {
+    border-color: #6366f1;
+    color: #6366f1;
+    background: #f5f3ff;
+}
+
+.img-count-btn.active {
+    border-color: #6366f1;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+}
+
+.generate-ai-images-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 340px;
+    padding: 0.85rem 1.5rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 18px rgba(99,102,241,0.35);
+}
+
+.generate-ai-images-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(99,102,241,0.45);
+}
+
+.generate-ai-images-btn:active {
+    transform: translateY(0);
+}

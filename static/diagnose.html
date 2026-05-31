@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Template Gallery Diagnostic</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .test { margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .pass { border-left: 4px solid #10b981; }
+        .fail { border-left: 4px solid #ef4444; }
+        h1 { color: #333; }
+        button { padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .status { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Template Gallery Diagnostic Tool</h1>
+
+    <div class="test" id="test1">
+        <h3>Test 1: Check if API endpoint exists</h3>
+        <button onclick="test1()">Run Test 1</button>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test" id="test2">
+        <h3>Test 2: Fetch templates data</h3>
+        <button onclick="test2()">Run Test 2</button>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test" id="test3">
+        <h3>Test 3: Check JavaScript file</h3>
+        <button onclick="test3()">Run Test 3</button>
+        <div id="result3"></div>
+    </div>
+
+    <div class="test" id="test4">
+        <h3>Test 4: Check CSS file</h3>
+        <button onclick="test4()">Run Test 4</button>
+        <div id="result4"></div>
+    </div>
+
+    <div class="test">
+        <h3>Run All Tests</h3>
+        <button onclick="runAll()">Run All Tests</button>
+    </div>
+
+    <script>
+        async function test1() {
+            const result = document.getElementById('result1');
+            result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                const response = await fetch('/api/templates');
+                if (response.ok) {
+                    document.getElementById('test1').classList.add('pass');
+                    result.innerHTML = '<p class="status" style="color: #10b981;">✓ PASS: API endpoint is working!</p>';
+                } else {
+                    document.getElementById('test1').classList.add('fail');
+                    result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: API returned ${response.status}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('test1').classList.add('fail');
+                result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: ${error.message}</p>`;
+            }
+        }
+
+        async function test2() {
+            const result = document.getElementById('result2');
+            result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                const response = await fetch('/api/templates');
+                const data = await response.json();
+
+                if (data.templates && data.colors) {
+                    document.getElementById('test2').classList.add('pass');
+                    result.innerHTML = `
+                        <p class="status" style="color: #10b981;">✓ PASS: Template data loaded successfully!</p>
+                        <p>Templates: ${data.templates.length}</p>
+                        <p>Colors: ${data.colors.length}</p>
+                        <details>
+                            <summary>Show first template</summary>
+                            <pre>${JSON.stringify(data.templates[0], null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    document.getElementById('test2').classList.add('fail');
+                    result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: Invalid data structure</p>`;
+                }
+            } catch (error) {
+                document.getElementById('test2').classList.add('fail');
+                result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: ${error.message}</p>`;
+            }
+        }
+
+        async function test3() {
+            const result = document.getElementById('result3');
+            result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                const response = await fetch('/static/js/template-gallery.js');
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text.includes('class TemplateGallery')) {
+                        document.getElementById('test3').classList.add('pass');
+                        result.innerHTML = `
+                            <p class="status" style="color: #10b981;">✓ PASS: JavaScript file exists and contains gallery class!</p>
+                            <p>File size: ${text.length} bytes</p>
+                        `;
+                    } else {
+                        document.getElementById('test3').classList.add('fail');
+                        result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: JavaScript file doesn't contain gallery class</p>`;
+                    }
+                } else {
+                    document.getElementById('test3').classList.add('fail');
+                    result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: JavaScript file not found (${response.status})</p>`;
+                }
+            } catch (error) {
+                document.getElementById('test3').classList.add('fail');
+                result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: ${error.message}</p>`;
+            }
+        }
+
+        async function test4() {
+            const result = document.getElementById('result4');
+            result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                const response = await fetch('/static/css/template-gallery.css');
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text.includes('template-card')) {
+                        document.getElementById('test4').classList.add('pass');
+                        result.innerHTML = `
+                            <p class="status" style="color: #10b981;">✓ PASS: CSS file exists and contains gallery styles!</p>
+                            <p>File size: ${text.length} bytes</p>
+                        `;
+                    } else {
+                        document.getElementById('test4').classList.add('fail');
+                        result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: CSS file doesn't contain gallery styles</p>`;
+                    }
+                } else {
+                    document.getElementById('test4').classList.add('fail');
+                    result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: CSS file not found (${response.status})</p>`;
+                }
+            } catch (error) {
+                document.getElementById('test4').classList.add('fail');
+                result.innerHTML = `<p class="status" style="color: #ef4444;">✗ FAIL: ${error.message}</p>`;
+            }
+        }
+
+        async function runAll() {
+            await test1();
+            await test2();
+            await test3();
+            await test4();
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAll, 500);
+        });
+    </script>
+</body>
+</html>

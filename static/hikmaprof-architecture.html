@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HikmaProf — Architecture Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding: 40px 24px 60px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, #58a6ff, #bc8cff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #7d8590;
+    margin-bottom: 48px;
+    letter-spacing: 0.4px;
+  }
+
+  /* ── Main layout ── */
+  .diagram {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+  }
+
+  /* ── Sections ── */
+  .section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    width: 100%;
+    max-width: 780px;
+    border-radius: 14px;
+    padding: 18px 24px;
+    position: relative;
+    border: 1px solid transparent;
+    transition: transform 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); }
+
+  .card-step {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    opacity: 0.65;
+    margin-bottom: 4px;
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #9ca3af;
+  }
+
+  .card-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 20px;
+    margin-top: 8px;
+  }
+
+  /* ── Arrows ── */
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2px 0;
+    gap: 0;
+  }
+  .arrow-line {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, #30363d, #58a6ff55);
+  }
+  .arrow-head {
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 9px solid #58a6ff88;
+  }
+
+  /* ── Fork / parallel rows ── */
+  .parallel-row {
+    width: 100%;
+    max-width: 780px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .parallel-row .card { max-width: 100%; }
+
+  /* ── Branch label ── */
+  .branch-line {
+    width: 100%;
+    max-width: 780px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 4px;
+  }
+  .branch-line span {
+    font-size: 11px;
+    color: #7d8590;
+    white-space: nowrap;
+    font-style: italic;
+  }
+  .branch-line::before, .branch-line::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #21262d;
+  }
+
+  /* ── Connector bridge (for parallel → single) ── */
+  .bridge {
+    width: 100%;
+    max-width: 780px;
+    height: 26px;
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+  }
+  .bridge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 25%;
+    right: 25%;
+    height: 1px;
+    background: #21262d;
+  }
+  .bridge::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, #21262d, #58a6ff55);
+    transform: translateX(-50%);
+  }
+
+  /* ── Runtime badge row ── */
+  .runtime-row {
+    width: 100%;
+    max-width: 780px;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .runtime-badge {
+    flex: 1;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+  }
+  .runtime-badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Three-mode table ── */
+  .modes {
+    width: 100%;
+    max-width: 780px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 36px;
+  }
+  .mode-card {
+    border-radius: 12px;
+    padding: 16px 18px;
+    border: 1px solid transparent;
+    text-align: center;
+  }
+  .mode-icon { font-size: 24px; margin-bottom: 8px; }
+  .mode-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .mode-sub { font-size: 11px; color: #7d8590; line-height: 1.4; }
+
+  /* ── Color themes per step ── */
+  .c-user    { background: #161b22; border-color: #30363d; }
+  .c-ai      { background: #1a1230; border-color: #6e40c9; }
+  .c-preview { background: #0d1f2d; border-color: #1f6feb; }
+  .c-pptx    { background: #0f1f12; border-color: #238636; }
+  .c-render  { background: #1c1710; border-color: #9e6a03; }
+  .c-tts     { background: #1c1018; border-color: #bf4b8a; }
+  .c-video   { background: #101c23; border-color: #2f81f7; }
+
+  .badge-ai      { background: #2d1f5e; color: #bc8cff; }
+  .badge-ts      { background: #162032; color: #58a6ff; }
+  .badge-py      { background: #1a2a1a; color: #56d364; }
+  .badge-opt     { background: #1f1505; color: #d29922; }
+
+  .sl-user    { color: #7d8590; }
+  .sl-ai      { color: #bc8cff; }
+  .sl-preview { color: #58a6ff; }
+  .sl-pptx    { color: #56d364; }
+  .sl-render  { color: #e3b341; }
+  .sl-tts     { color: #f778ba; }
+  .sl-video   { color: #79c0ff; }
+
+  .sec-ai   { background: #2d1f5e33; color: #bc8cff; border: 1px solid #6e40c955; }
+  .sec-py   { background: #0f1f1233; color: #56d364;  border: 1px solid #23863655; }
+  .sec-out  { background: #101c2333; color: #79c0ff;  border: 1px solid #2f81f755; }
+
+  /* mode card colors */
+  .m-full   { background: #0f1f12; border-color: #238636; }
+  .m-pptv   { background: #0d1f2d; border-color: #1f6feb; }
+  .m-redl   { background: #1a1230; border-color: #6e40c9; }
+
+  .rt-py  { background: #0a1a0a; border-color: #238636; color: #56d364; }
+  .rt-ts  { background: #0a1525; border-color: #1f6feb; color: #58a6ff; }
+  .rt-py .dot { background: #56d364; }
+  .rt-ts .dot { background: #58a6ff; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 50px;
+    font-size: 11px;
+    color: #3d444d;
+    letter-spacing: 0.4px;
+  }
+
+  /* Output box */
+  .output-box {
+    width: 100%;
+    max-width: 780px;
+    border-radius: 14px;
+    padding: 18px 24px;
+    background: #101c23;
+    border: 1px solid #2f81f7;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .output-files {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .file-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .file-pill .ext {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+  .ext-pptx { background: #1b2a0e; color: #56d364; }
+  .ext-mp4  { background: #101c2d; color: #79c0ff; }
+  .ext-txt  { background: #1c1710; color: #e3b341; }
+</style>
+</head>
+<body>
+
+<h1>HikmaProf</h1>
+<p class="subtitle">AI-Powered Document → Presentation → Video Pipeline</p>
+
+<div class="diagram">
+
+  <!-- Runtime legend -->
+  <div class="runtime-row">
+    <div class="runtime-badge rt-ts">
+      <div class="dot"></div>
+      TypeScript / Node.js — Claude AI calls &amp; PPTX generation
+    </div>
+    <div class="runtime-badge rt-py">
+      <div class="dot"></div>
+      Python / Flask — Web server, TTS, video composition
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card c-user">
+    <div class="card-step sl-user">Step 1</div>
+    <div class="card-title">User Uploads Document</div>
+    <div class="card-desc">PDF / DOCX / LaTeX file — with choices for template style, color scheme, language (11 supported), number of slides (5–30), and optional Hikma avatar character.</div>
+    <span class="card-badge badge-py">Python · Flask /api/generate</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- STEP 2 -->
+  <div class="card c-ai">
+    <div class="card-step sl-ai">Step 2 · TypeScript</div>
+    <div class="card-title">Claude AI Reads &amp; Plans the Presentation</div>
+    <div class="card-desc">
+      Document text is sent to <strong style="color:#bc8cff">Claude claude-sonnet-4-20250514</strong>.
+      Claude returns a structured <em>Slide Plan</em>: slide titles, bullet points, speaker notes, layout type, theme colors — one entry per slide.
+    </div>
+    <span class="card-badge badge-ai">Claude AI · SlidePlan JSON</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- STEP 3 (optional) -->
+  <div class="card c-preview">
+    <div class="card-step sl-preview">Step 3 · Optional</div>
+    <div class="card-title">User Reviews &amp; Edits the Slide Plan</div>
+    <div class="card-desc">If preview mode is on, the pipeline pauses and shows the AI-generated slide cards. The user can edit titles, bullets, or reorder slides before approving to continue.</div>
+    <span class="card-badge badge-opt">Optional · awaiting_approval state</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- STEP 4 -->
+  <div class="card c-pptx">
+    <div class="card-step sl-pptx">Step 4 · TypeScript</div>
+    <div class="card-title">PPTX is Built, Validated &amp; Auto-Fixed</div>
+    <div class="card-desc">
+      The slide plan is rendered into a <strong style="color:#56d364">.pptx</strong> file using the chosen template. Claude Vision then checks each slide for layout issues, text overflow, and contrast problems. If issues are found, Claude auto-fixes them — up to 5 iterations. Speaker notes become the <strong style="color:#e3b341">transcript.txt</strong>.
+    </div>
+    <span class="card-badge badge-ts">PptxGenJS · Visual Validator · Auto Fixer</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- STEP 5 -->
+  <div class="card c-render">
+    <div class="card-step sl-render">Step 5 · Python</div>
+    <div class="card-title">Slides Rendered to Images</div>
+    <div class="card-desc">PPTX → PDF (LibreOffice or PowerPoint COM) → high-resolution PNG images, one per slide. These become the video frames.</div>
+    <span class="card-badge badge-py">PyMuPDF · LibreOffice · pdftoppm</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- STEP 6 -->
+  <div class="card c-tts">
+    <div class="card-step sl-tts">Step 6 · Python</div>
+    <div class="card-title">Voice Narration Generated (TTS)</div>
+    <div class="card-desc">
+      Each slide's transcript text is converted to speech using <strong style="color:#f778ba">Microsoft Edge Neural TTS</strong> — gender-matched to the chosen avatar character. Falls back to Google TTS if Edge TTS fails. One audio file per slide.
+    </div>
+    <span class="card-badge badge-py">Edge TTS → gTTS → silent fallback</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- STEP 7 -->
+  <div class="card c-video">
+    <div class="card-step sl-video">Step 7 · Python</div>
+    <div class="card-title">Final Video Composed</div>
+    <div class="card-desc">
+      Each slide is composed as a layered video clip:
+      <br><br>
+      <span style="color:#30363d">█</span> <strong style="color:#e6edf3">Slide image</strong> — full background frame
+      <br>
+      <span style="color:#1c1c1c">●</span> <strong style="color:#9ca3af">Drop shadow</strong> — blurred dark ellipse beneath avatar
+      <br>
+      <span style="color:#0C192D">▬</span> <strong style="color:#9ca3af">Dark panel</strong> — semi-transparent navy rounded rectangle
+      <br>
+      <span style="color:#fff">●</span> <strong style="color:#e6edf3">Avatar circle</strong> — pre-built video, muted &amp; looped, white border ring, 0.4s fade-in
+      <br><br>
+      All per-slide clips are concatenated into one final MP4.
+    </div>
+    <span class="card-badge badge-py">MoviePy · PIL · FFmpeg</span>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- OUTPUT -->
+  <div class="output-box">
+    <div style="font-size:22px">📦</div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:#79c0ff;margin-bottom:10px;letter-spacing:0.5px">OUTPUT FILES — available for download</div>
+      <div class="output-files">
+        <div class="file-pill"><span class="ext ext-pptx">PPTX</span> presentation.pptx</div>
+        <div class="file-pill"><span class="ext ext-mp4">MP4</span> presentation_video.mp4</div>
+        <div class="file-pill"><span class="ext ext-txt">TXT</span> transcript.txt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three modes -->
+  <div class="branch-line" style="margin-top:48px"><span>Three Ways to Use HikmaProf</span></div>
+  <div class="modes">
+    <div class="mode-card m-full">
+      <div class="mode-icon">📄 → 🎞️</div>
+      <div class="mode-title" style="color:#56d364">Full Pipeline</div>
+      <div class="mode-sub">Upload PDF/DOCX/TEX<br>Get PPTX + Video</div>
+    </div>
+    <div class="mode-card m-pptv">
+      <div class="mode-icon">📊 → 🎥</div>
+      <div class="mode-title" style="color:#58a6ff">PPT-to-Video</div>
+      <div class="mode-sub">Upload PPTX + Transcript<br>Get Video only</div>
+    </div>
+    <div class="mode-card m-redl">
+      <div class="mode-icon">🔁</div>
+      <div class="mode-title" style="color:#bc8cff">Re-download Video</div>
+      <div class="mode-sub">Re-generate video from<br>an existing completed job</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="footer">HikmaProf · AI Presentation Pipeline · Architecture Overview</p>
+
+</body>
+</html>

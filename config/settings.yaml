@@ -1,0 +1,35 @@
+app:
+  name: gen_ppt_video
+  version: 0.1.0
+
+pipeline:
+  max_fix_iterations: 3
+  timeout_seconds: 300
+
+pptx:
+  default_theme: default
+  slide_width: 10
+  slide_height: 7.5
+  font_size:
+    title: 32
+    content: 18
+    notes: 14
+
+video:
+  resolution:
+    width: 1920
+    height: 1080
+  fps: 30
+  codec: h264
+  audio_bitrate: 192k
+
+transcript:
+  default_voice: en-US-Standard-A
+  speaking_rate: 1.0
+  pitch: 0.0
+
+validation:
+  min_score: 0.7
+  check_readability: true
+  check_contrast: true
+  check_alignment: true

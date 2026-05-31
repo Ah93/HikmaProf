@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(del \"c:\\\\Users\\\\ahmed\\\\OneDrive\\\\Desktop\\\\AI Projects 2\\\\HikmaProf-main\\\\HikmaProf-main\\\\src\\\\modules\\\\slidev-content-analyzer.ts\")"
+    ]
+  }
+}

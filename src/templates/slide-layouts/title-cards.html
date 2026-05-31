@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 960px; height: 540px; margin: 0;
+      font-family: {{fontFamily}};
+      background-color: {{backgroundColor}};
+      display: flex; flex-direction: column;
+    }
+    .title-zone { padding: 24px 40px 16px; }
+    h1 { font-size: 32px; color: {{primaryColor}}; margin: 0; }
+    .cards-container {
+      display: flex; flex: 1;
+      padding: 0 40px 30px; gap: 20px;
+      align-items: stretch;
+    }
+    .card {
+      flex: 1; background: #f8fafc;
+      border-radius: 8px; padding: 20px;
+      border-left: 4px solid {{accentColor}};
+      display: flex; flex-direction: column;
+    }
+    .card-title {
+      font-size: 18px; font-weight: bold;
+      color: {{primaryColor}}; margin-bottom: 12px;
+    }
+    .card-body {
+      font-size: 14px; color: #555;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="title-zone"><h1>{{title}}</h1></div>
+  <div class="cards-container">
+    {{#each cards}}
+    <div class="card">
+      <div class="card-title">{{this.title}}</div>
+      <div class="card-body">{{this.body}}</div>
+    </div>
+    {{/each}}
+  </div>
+</body>
+</html>

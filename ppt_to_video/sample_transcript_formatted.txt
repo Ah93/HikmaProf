@@ -1,0 +1,30 @@
+## Slide 1 – Introduction to Deep Neural Networks
+Welcome to this presentation on deep neural networks for speech emotion recognition. Today we will explore the fundamentals of delta delta MFCCs and how they are used in emotion detection systems.
+---
+## Slide 2 – What are Delta Delta MFCCs
+Delta delta MFCCs are second-order derivatives of Mel Frequency Cepstral Coefficients. They capture the rate of change in the rate of change of spectral features, providing crucial temporal dynamics information for speech analysis.
+---
+## Slide 3 – Temporal Dynamics in Speech
+These features are designed to capture temporal dynamics in speech signals. By analyzing how acoustic features change over time, we can better understand emotional states conveyed through speech patterns.
+---
+## Slide 4 – Deep Neural Network Architecture
+The deep neural network architecture includes multiple hidden layers with ReLU activation functions. Each layer learns increasingly abstract representations of the input features, enabling complex pattern recognition.
+---
+## Slide 5 – Network Configuration
+The network configuration consists of an input layer that accepts delta delta MFCC features, three hidden layers with 256 neurons each, and an output layer for emotion classification into seven categories.
+---
+## Slide 6 – Training Process
+The training process uses backpropagation with Adam optimizer. We employ dropout regularization to prevent overfitting and batch normalization to stabilize learning across different emotion classes.
+---
+## Slide 7 – Experiments and Results
+In our experiments, we achieved 72.3% accuracy on the RAVDESS dataset. This demonstrates significant improvements over traditional machine learning approaches that rely solely on static MFCC features.
+---
+## Slide 8 – Performance Analysis
+The performance analysis shows that the model excels at recognizing happiness and anger, but struggles with subtle emotions like calmness and sadness. This suggests room for architectural improvements.
+---
+## Slide 9 – Confusion Matrix Overview
+The confusion matrix reveals important patterns in our classification results. We can see that most misclassifications occur between emotionally similar categories, which is consistent with human perception studies.
+---
+## Slide 10 – Confusion Matrix Analysis
+The confusion matrix analysis includes detailed breakdowns of true positives, false positives, and false negatives for each emotion category. Happiness shows the highest precision at 85%, while neutral emotion has the most classification errors.
+---
