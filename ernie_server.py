@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import base64
+import gc
 import io
 import logging
 import os
@@ -22,11 +23,15 @@ import threading
 import time
 import uuid
 
+# Must be set before CUDA initializes (before any torch CUDA call)
+os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True,max_split_size_mb:512')
+
 import torch
+from accelerate import dispatch_model, infer_auto_device_map
 from diffusers import ErnieImagePipeline
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from PIL import Image
+from PIL import Image, ImageFilter
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -56,9 +61,13 @@ def parse_args() -> argparse.Namespace:
                    help='Inference steps per image (default: 8)')
     p.add_argument('--guidance',    type=float, default=1.0,
                    help='Guidance scale (default: 1.0)')
-    p.add_argument('--dtype',       type=str,   default='float16',
+    p.add_argument('--max-width',   type=int,   default=768,
+                   help='Cap on image width; requests above this are clamped (default: 768)')
+    p.add_argument('--max-height',  type=int,   default=512,
+                   help='Cap on image height; requests above this are clamped (default: 512)')
+    p.add_argument('--dtype',       type=str,   default='bfloat16',
                    choices=['float16', 'bfloat16', 'float32'],
-                   help='Model dtype — use float16 for RTX 2080 Ti (default: float16)')
+                   help='Model dtype — bfloat16 avoids float16 underflow (default: bfloat16)')
     p.add_argument('--ngrok',       action='store_true',
                    help='Enable ngrok public tunnel')
     p.add_argument('--ngrok-token', type=str,   default='',
@@ -84,12 +93,65 @@ def load_model(dtype_str: str) -> ErnieImagePipeline:
             props = torch.cuda.get_device_properties(i)
             log.info(f'  GPU {i}: {props.name}  ({props.total_memory / 1e9:.1f} GB VRAM)')
 
-    log.info(f'Loading baidu/ERNIE-Image-Turbo  [dtype={dtype_str}, device_map=balanced] ...')
+    log.info(f'Loading baidu/ERNIE-Image-Turbo  [dtype={dtype_str}] to CPU ...')
     pipe = ErnieImagePipeline.from_pretrained(
         'baidu/ERNIE-Image-Turbo',
         torch_dtype=dtype,
-        device_map='balanced',
+        low_cpu_mem_usage=True,
     )
+
+    if n_gpus >= 2:
+        # Layout:
+        #   GPU 0 (10.75 GB): vae (~0.5 GB) + most of transformer
+        #   GPU 1 (10.75 GB): text_encoder (~7.6 GB) + rest of transformer
+        log.info('Moving text_encoder → cuda:1, vae → cuda:0 ...')
+        pipe.text_encoder.to('cuda:1')
+        pipe.vae.to('cuda:0')
+
+        # Keep transformer on GPU 0 only — overflow goes to CPU RAM, not GPU 1.
+        # Splitting transformer across 2 GPUs causes tensor device mismatches for
+        # shared tensors (rotary_pos_emb, temb) passed to every layer.
+        used_0  = torch.cuda.memory_allocated(0) / 1024 ** 3
+        total_0 = torch.cuda.get_device_properties(0).total_memory / 1024 ** 3
+        avail_0 = round(total_0 - used_0 - 3.0, 1)   # 3 GB headroom for attention activation spike (774 MiB observed)
+        log.info(f'  cuda:0 free for transformer: {avail_0} GiB  (overflow → CPU RAM)')
+
+        device_map = infer_auto_device_map(
+            pipe.transformer,
+            max_memory={0: f'{avail_0}GiB', 'cpu': '40GiB'},
+            dtype=dtype,
+        )
+        pipe.transformer = dispatch_model(pipe.transformer, device_map=device_map)
+        log.info('Transformer: GPU 0 layers + CPU RAM overflow (no GPU 1 split)')
+
+        # Pipeline creates input tensors on its default device (cuda:0) but
+        # text_encoder is on cuda:1 — hook moves ALL inputs (args + kwargs) to the right device
+        def _auto_device_hook(module, args, kwargs):
+            dev = next(module.parameters()).device
+            new_args = tuple(a.to(dev) if isinstance(a, torch.Tensor) else a for a in args)
+            new_kwargs = {k: (v.to(dev) if isinstance(v, torch.Tensor) else v)
+                          for k, v in kwargs.items()}
+            return new_args, new_kwargs
+
+        pipe.text_encoder.register_forward_pre_hook(_auto_device_hook, with_kwargs=True)
+        log.info('Registered device-correction hook on text_encoder (args + kwargs)')
+
+        # Slice attention computation to reduce peak activation memory
+        pipe.enable_attention_slicing(1)
+        log.info('Attention slicing enabled (reduces peak VRAM during inference)')
+
+        # xformers memory-efficient attention (optional, supersedes slicing if available)
+        try:
+            pipe.enable_xformers_memory_efficient_attention()
+            log.info('xformers memory-efficient attention enabled')
+        except Exception:
+            log.info('xformers not available — falling back to attention slicing')
+
+    elif n_gpus == 1:
+        log.info('Moving pipeline to cuda:0 ...')
+        pipe.to('cuda:0')
+    else:
+        log.warning('No GPU found — running on CPU (very slow)')
 
     log.info('Model loaded successfully.')
     for i in range(n_gpus):
@@ -110,17 +172,26 @@ def generate_image(
     steps: int = 8,
     guidance: float = 1.0,
 ) -> Image.Image:
+    gc.collect()
+    torch.cuda.empty_cache()
     generator = torch.Generator('cpu').manual_seed(seed)
+    negative_prompt = (
+        'blurry text, distorted letters, illegible text, bad typography, '
+        'low quality, noisy, watermark, jpeg artifacts'
+    )
     result = pipe(
         prompt=prompt,
+        negative_prompt=negative_prompt,
         height=height,
         width=width,
         num_inference_steps=steps,
         guidance_scale=guidance,
-        use_pe=True,
+        use_pe=False,
         generator=generator,
     )
-    return result.images[0]
+    img = result.images[0]
+    img = img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=130, threshold=3))
+    return img
 
 
 def image_to_b64(img: Image.Image) -> str:
@@ -207,6 +278,8 @@ def create_app(
     job_store: dict,
     req_queue: queue.Queue,
     max_prompts: int,
+    max_width: int = 896,
+    max_height: int = 640,
 ) -> Flask:
     app = Flask(__name__)
     CORS(app)
@@ -253,8 +326,8 @@ def create_app(
             'job_id':  job_id,
             'prompts': prompts,
             'seed':    int(data.get('seed', 42)),
-            'width':   int(data.get('width', 1024)),
-            'height':  int(data.get('height', 768)),
+            'width':   min(int(data.get('width',  768)), max_width),
+            'height':  min(int(data.get('height', 512)), max_height),
         })
         log.info(f'[{job_id[:8]}] Queued — {len(prompts)} prompt(s) | queue depth: {req_queue.qsize()}')
         return jsonify({'job_id': job_id, 'status': 'queued'}), 202
@@ -332,7 +405,7 @@ def main() -> None:
     start_worker(pipe, job_store, req_queue, args.output_dir, args.steps, args.guidance)
 
     # Build Flask app
-    app = create_app(pipe, job_store, req_queue, args.max_prompts)
+    app = create_app(pipe, job_store, req_queue, args.max_prompts, args.max_width, args.max_height)
 
     # Optional ngrok
     if args.ngrok:

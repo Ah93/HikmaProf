@@ -7,6 +7,7 @@ class TemplateGallery {
         this.selectedColor = 'blue';
         this.selectedNumImages = 3;
         this.selectedAiColor = 'indigo';
+        this.selectedAiStyle = 'dark-tech';
         this.activeTab = 'pptx'; // 'pptx' | 'images'
         this.init();
     }
@@ -197,6 +198,12 @@ class TemplateGallery {
                 this.selectAiColor(colorBtn.dataset.aiColor);
                 return;
             }
+
+            const styleBtn = e.target.closest('.ai-style-btn');
+            if (styleBtn && styleBtn.dataset.aiStyle) {
+                this.selectAiStyle(styleBtn.dataset.aiStyle);
+                return;
+            }
         });
 
         const changeBtn = document.getElementById('changeTemplateBtn');
@@ -324,6 +331,15 @@ class TemplateGallery {
         });
     }
 
+    selectAiStyle(style) {
+        this.selectedAiStyle = style;
+        const input = document.getElementById('aiStyle');
+        if (input) input.value = style;
+        document.querySelectorAll('.ai-style-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.aiStyle === style);
+        });
+    }
+
     // ── AI Images generation flow ──────────────────────────────────────────────
 
     async generateWithImages() {
@@ -340,6 +356,7 @@ class TemplateGallery {
         formData.append('file', fileInput.files[0]);
         formData.append('num_images', numImages);
         formData.append('ai_color', this.selectedAiColor);
+        formData.append('ai_style', this.selectedAiStyle);
 
         const btn = document.getElementById('generateWithImagesBtn');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting...'; }

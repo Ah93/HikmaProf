@@ -160,7 +160,7 @@
                                     </button>
                                     <button type="button" class="gallery-tab-btn" data-tab="images">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                                        AI Images <span class="tab-badge">New</span>
+                                        AI Slide Visuals <span class="tab-badge">New</span>
                                     </button>
                                 </div>
 
@@ -179,15 +179,26 @@
                                             <strong>AI-generated images for your slides</strong> — DeepSeek selects the best slides and writes visual prompts; ERNIE generates the images and embeds them directly into your PPTX.
                                         </div>
                                     </div>
-                                    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #2c3e50;">How many images?</h3>
+                                    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #2c3e50;">How many Slides?</h3>
                                     <div class="image-count-selector" id="imageCountSelector">
-                                        <button type="button" class="img-count-btn" data-count="1">1 image</button>
-                                        <button type="button" class="img-count-btn active" data-count="3">3 images</button>
-                                        <button type="button" class="img-count-btn" data-count="4">4 images</button>
-                                        <button type="button" class="img-count-btn" data-count="5">5 images</button>
+                                        <button type="button" class="img-count-btn active" data-count="3">3 Slides</button>
+                                        <button type="button" class="img-count-btn" data-count="4">4 Slides</button>
+                                        <button type="button" class="img-count-btn" data-count="5">5 Slides</button>
+                                        <button type="button" class="img-count-btn" data-count="6">6 Slides</button>
+                                        <button type="button" class="img-count-btn" data-count="7">7 Slides</button>
+                                        <button type="button" class="img-count-btn" data-count="8">8 Slides</button>
                                     </div>
 
-                                    <h3 style="margin-top:1.5rem;margin-bottom:0.75rem;color:#2c3e50;">Accent Color</h3>
+                                    <h3 style="margin-top:1.5rem;margin-bottom:0.75rem;color:#2c3e50;">Slide Style</h3>
+                                    <div id="aiStyleSelector" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+                                        <button type="button" class="ai-style-btn active" data-ai-style="dark-tech">Dark Tech</button>
+                                        <button type="button" class="ai-style-btn"        data-ai-style="light">Light &amp; Clean</button>
+                                        <button type="button" class="ai-style-btn"        data-ai-style="corporate">Corporate</button>
+                                        <button type="button" class="ai-style-btn"        data-ai-style="neon">Neon Glow</button>
+                                        <button type="button" class="ai-style-btn"        data-ai-style="minimal">Minimal</button>
+                                    </div>
+
+                                    <h3 style="margin-top:1rem;margin-bottom:0.75rem;color:#2c3e50;">Accent Color</h3>
                                     <div id="aiColorSelector" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
                                         <button type="button" class="ai-color-btn active" data-ai-color="indigo"  title="Indigo"  style="background:#4F46E5;"></button>
                                         <button type="button" class="ai-color-btn"        data-ai-color="teal"    title="Teal"    style="background:#0D9488;"></button>
@@ -195,11 +206,21 @@
                                         <button type="button" class="ai-color-btn"        data-ai-color="purple"  title="Purple"  style="background:#7C3AED;"></button>
                                         <button type="button" class="ai-color-btn"        data-ai-color="emerald" title="Emerald" style="background:#059669;"></button>
                                         <button type="button" class="ai-color-btn"        data-ai-color="rose"    title="Rose"    style="background:#E11D48;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="orange"  title="Orange"  style="background:#F97316;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="gold"    title="Gold"    style="background:#EAB308;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="cyan"    title="Cyan"    style="background:#06B6D4;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="red"     title="Red"     style="background:#DC2626;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="pink"    title="Pink"    style="background:#EC4899;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="slate"   title="Slate"   style="background:#475569;"></button>
+                                        <button type="button" class="ai-color-btn"        data-ai-color="white"   title="White"   style="background:#FFFFFF;border-color:#cbd5e1;"></button>
                                     </div>
                                     <style>
                                         .ai-color-btn{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:all .2s;outline:none;padding:0;}
                                         .ai-color-btn:hover{transform:scale(1.15);}
                                         .ai-color-btn.active{border-color:#1e293b;transform:scale(1.2);box-shadow:0 0 0 2px #fff,0 0 0 4px #1e293b;}
+                                        .ai-style-btn{padding:6px 14px;border-radius:20px;border:2px solid #cbd5e1;background:#fff;color:#475569;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap;}
+                                        .ai-style-btn:hover{border-color:#6366f1;color:#6366f1;}
+                                        .ai-style-btn.active{border-color:#4F46E5;background:#4F46E5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3);}
                                     </style>
 
                                     <p style="margin-top:1rem;font-size:13px;color:#64748b;">Upload your document and AI will generate diagram-style slides representing your content.</p>
@@ -215,6 +236,7 @@
                         <input type="hidden" id="colorScheme" name="color_scheme" value="blue">
                         <input type="hidden" id="presentationType" name="presentation_type" value="pptx">
                         <input type="hidden" id="numImages" name="num_images" value="0">
+                        <input type="hidden" id="aiStyle"  name="ai_style"   value="dark-tech">
 
                         <!-- Avatar Selection — below template & color -->
                         <div class="form-card" id="pptx-avatar-section">

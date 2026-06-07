@@ -458,37 +458,183 @@ _AI_COLOR_MAP = {
     'purple':  ('royal purple #7C3AED',  'soft lavender #FAF5FF'),
     'emerald': ('emerald green #059669', 'mint white #F0FDF4'),
     'rose':    ('rose red #E11D48',      'blush white #FFF1F2'),
+    'orange':  ('vivid orange #F97316',  'warm white #FFF7ED'),
+    'gold':    ('golden yellow #EAB308', 'warm cream #FEFCE8'),
+    'cyan':    ('bright cyan #06B6D4',   'ice blue #ECFEFF'),
+    'red':     ('deep red #DC2626',      'blush white #FFF1F2'),
+    'pink':    ('hot pink #EC4899',      'blush #FDF2F8'),
+    'slate':   ('steel slate #475569',   'light gray #F8FAFC'),
+    'white':   ('silver white #E2E8F0',  'pure white #FFFFFF'),
 }
 
 
-def _generate_prompts_from_text(text, num_images, ai_color='indigo'):
-    """Generate dark tech presentation slide prompts from document text.
-
-    Each image matches the premium dark tech slide aesthetic:
-      BACKGROUND — deep navy blue to dark purple gradient, subtle particle/network lines
-      TITLE      — large bold white text, prominent at top
-      LAYOUT     — chosen per content type (icon bullets / layered architecture /
-                   flowchart / two-panel comparison / diagram slide)
-      CARDS      — dark frosted glass panels with colored glow borders
-      ACCENTS    — neon glow in the user's chosen accent color
-      FOOTER     — thin accent line + slide info text
-    """
+def _generate_prompts_from_text(text, num_images, ai_color='indigo', ai_style='dark-tech'):
+    """Generate presentation slide prompts from document text, styled per ai_style."""
     import requests as _req
 
-    accent, _bg = _AI_COLOR_MAP.get(ai_color, _AI_COLOR_MAP['indigo'])
+    accent, bg = _AI_COLOR_MAP.get(ai_color, _AI_COLOR_MAP['indigo'])
 
-    # Style anchor appended to every prompt
-    SLIDE_SUFFIX = (
-        f", dark navy blue to dark purple gradient background, subtle {accent} particle network "
-        f"lines and glowing dots, large bold white title prominent at top, "
-        f"{accent} neon glow accent color, dark frosted glass card panels with {accent} glowing border, "
-        f"diagram nodes in {accent} and contrasting vibrant colors with white bold labels, "
-        f"clean professional tech presentation, sharp typography, 16:9, no photographs, no people"
-    )
+    # ── Per-style suffix and system prompt ────────────────────────────────────
+    if ai_style == 'light':
+        SLIDE_SUFFIX = (
+            f", clean white background, {accent} accent color for headings and borders, "
+            f"white card panels with thin {accent} border and soft drop shadow, "
+            f"dark charcoal titles, colored {accent} subheadings, airy and bright layout, "
+            f"diagram nodes with {accent} fill and white bold labels, professional typography, "
+            f"16:9, no photographs, no people"
+        )
+        SYSTEM_PROMPT = f"""
+You write text-to-image prompts for ERNIE that produce PREMIUM LIGHT & CLEAN PRESENTATION SLIDES —
+the style of top-tier product and SaaS decks: bright white backgrounds, bold colored headings,
+clean card panels, and richly labeled diagrams.
 
-    SYSTEM_PROMPT = f"""
+VISUAL STYLE (apply to every slide)
+• Background   : clean white or very light gray (#F8FAFC)
+• Title        : very large bold dark charcoal text at top of slide
+• Accent color : {accent} — headings, icon fills, borders, diagram node fills
+• Cards/panels : white with thin {accent} left border or outline, subtle box-shadow
+• Node text    : always white bold inside {accent}-filled nodes
+• Typography   : clean modern sans-serif, dark on light, high readability
+
+LAYOUT TYPES — pick the best match
+LAYOUT A — ICON BULLET LIST: white background, large dark title, 3–4 white cards each with {accent} icon + dark heading + gray description
+LAYOUT B — LAYERED ARCHITECTURE: white background, 3 stacked white panels with {accent} top border and upward {accent} arrows
+LAYOUT C — FLOWCHART: white background, {accent} rounded step boxes with white labels, connecting arrows
+LAYOUT D — TWO-PANEL COMPARISON: two white panels side by side with {accent} heading, bullet lists, bottom diagram
+LAYOUT E — DIAGRAM + BULLETS: white background, dark title, left bullets with {accent} dots, right {accent}-colored concept diagram
+
+EXTRACTION RULES
+1. Use REAL section title as slide title (large bold dark charcoal)
+2. Use REAL document terms as node/card labels
+3. NEVER use placeholder text like "Step 1" or "Feature X"
+4. Choose layout based on content type: features→A, architecture→B, pipeline→C, comparison→D, overview→E
+
+NEVER include: people, faces, scenery, dark backgrounds, photographs
+"""
+
+    elif ai_style == 'corporate':
+        SLIDE_SUFFIX = (
+            f", professional light slate background, navy blue primary color, "
+            f"{accent} accent highlights on borders and key elements, "
+            f"white content panels with subtle gray borders, conservative business typography, "
+            f"diagram nodes in {accent} with white labels, no decorative gradients, "
+            f"16:9, no photographs, no people"
+        )
+        SYSTEM_PROMPT = f"""
+You write text-to-image prompts for ERNIE that produce PREMIUM CORPORATE PRESENTATION SLIDES —
+the style of Fortune 500 boardroom decks: light gray backgrounds, navy blue text, subtle accents,
+white content panels, and clean professional diagrams.
+
+VISUAL STYLE (apply to every slide)
+• Background   : light slate gray (#F1F5F9) or white
+• Title        : large bold navy blue text at top
+• Accent color : {accent} — used sparingly on key borders, icons, and highlights
+• Cards/panels : white with gray border and subtle drop shadow
+• Node text    : white bold inside {accent}-colored nodes; dark text elsewhere
+• Typography   : conservative serif or clean sans-serif, authoritative look
+
+LAYOUT TYPES — pick the best match
+LAYOUT A — ICON BULLET LIST: light gray background, navy title, white cards with {accent} left accent bar + navy heading + gray body text
+LAYOUT B — LAYERED ARCHITECTURE: white background, navy title, white stacked panels with {accent} left border, upward navy arrows
+LAYOUT C — FLOWCHART: light background, {accent} step boxes with white labels, navy connecting arrows
+LAYOUT D — TWO-PANEL COMPARISON: two white panels with navy headings, gray bullet points, {accent} diagram below
+LAYOUT E — DIAGRAM + BULLETS: light background, navy title, navy bullet text with {accent} dot, right-side {accent} diagram
+
+EXTRACTION RULES
+1. Use REAL section title as slide title (large bold navy)
+2. Use REAL document terms as node/card labels
+3. NEVER use placeholder text
+4. NEVER use neon colors, gradients, or decorative particle effects
+
+NEVER include: people, faces, scenery, dark backgrounds, photographs
+"""
+
+    elif ai_style == 'neon':
+        SLIDE_SUFFIX = (
+            f", pure black background, vivid neon {accent} glow outlines and borders, "
+            f"electric neon text highlights, glowing neon grid lines on black, "
+            f"dark panels with neon {accent} electric outlines, cyberpunk aesthetic, "
+            f"diagram nodes outlined in neon {accent} with glowing text, "
+            f"16:9, no photographs, no people"
+        )
+        SYSTEM_PROMPT = f"""
+You write text-to-image prompts for ERNIE that produce PREMIUM NEON GLOW PRESENTATION SLIDES —
+the style of cyberpunk and gaming conference decks: pure black backgrounds, vivid neon {accent}
+outlines, electric glow effects, and richly labeled neon diagrams.
+
+VISUAL STYLE (apply to every slide)
+• Background   : pure black (#000000) or very dark (#0A0A0A)
+• Title        : very large bold white text with subtle neon {accent} glow
+• Accent color : {accent} — neon outlines, electric borders, glow halos, key node fills
+• Cards/panels : black with vivid neon {accent} electric border and outer glow
+• Node text    : white bold with neon {accent} shadow inside dark panels
+• Grid/lines   : faint neon {accent} grid or circuit lines on background
+
+LAYOUT TYPES — pick the best match
+LAYOUT A — ICON BULLET LIST: black background, white glowing title, 3–4 dark cards with neon {accent} outline + glowing icon + white bold heading + light gray text
+LAYOUT B — LAYERED ARCHITECTURE: black background, 3 stacked dark panels with neon {accent} border, upward neon arrow connectors
+LAYOUT C — FLOWCHART: black background, dark rounded steps with neon {accent} border + white labels, neon arrow connectors
+LAYOUT D — TWO-PANEL COMPARISON: two dark panels with neon {accent} heading glow, white bullet lists, neon diagram below
+LAYOUT E — DIAGRAM + BULLETS: black background, white glowing title, left white bullets with neon {accent} dot, right glowing {accent} network diagram
+
+EXTRACTION RULES
+1. Use REAL section title as slide title (large bold white with neon glow)
+2. Use REAL document terms as node/card labels
+3. NEVER use placeholder text
+4. NEVER use light or pastel backgrounds
+
+NEVER include: people, faces, scenery, light backgrounds, photographs
+"""
+
+    elif ai_style == 'minimal':
+        SLIDE_SUFFIX = (
+            f", pure white background, single thin {accent} horizontal rule under title, "
+            f"clean hairline borders on cards, no gradients, minimal decoration, "
+            f"dark charcoal text, {accent} used only for one accent line and key headings, "
+            f"lots of whitespace, Swiss-style typography, flat diagram nodes with {accent} outline, "
+            f"16:9, no photographs, no people"
+        )
+        SYSTEM_PROMPT = f"""
+You write text-to-image prompts for ERNIE that produce PREMIUM MINIMAL PRESENTATION SLIDES —
+the style of Bauhaus and Swiss design: pure white backgrounds, hairline borders, a single {accent}
+accent, and disciplined typography with generous whitespace.
+
+VISUAL STYLE (apply to every slide)
+• Background   : pure white (#FFFFFF)
+• Title        : large bold dark charcoal text + thin {accent} underline rule
+• Accent color : {accent} — used ONLY for the title rule, one or two key headings, and diagram outlines
+• Cards/panels : white with hairline gray border, no shadows, no fill
+• Node text    : dark charcoal inside outline-only diagram nodes with thin {accent} border
+• Whitespace   : generous margins, no clutter, no decorative elements
+• Typography   : geometric sans-serif, disciplined grid layout
+
+LAYOUT TYPES — pick the best match
+LAYOUT A — ICON BULLET LIST: white background, dark title + {accent} rule, 3–4 borderline-only cards with outline icon + dark heading + gray text
+LAYOUT B — LAYERED ARCHITECTURE: white background, hairline-bordered stacked panels with {accent} accent labels, thin upward arrows
+LAYOUT C — FLOWCHART: white background, outline-only step boxes with dark labels, thin {accent} arrow connectors
+LAYOUT D — TWO-PANEL COMPARISON: two hairline-bordered panels, dark headings, gray bullet text, thin diagram below
+LAYOUT E — DIAGRAM + BULLETS: white background, dark title + {accent} rule, left clean bullet list, right outline-only diagram
+
+EXTRACTION RULES
+1. Use REAL section title as slide title
+2. Use REAL document terms as labels
+3. NEVER use neon, gradients, decorative fills, or dark backgrounds
+4. NEVER add unnecessary elements — only what is needed
+
+NEVER include: people, faces, scenery, dark backgrounds, photographs
+"""
+
+    else:  # dark-tech (default)
+        SLIDE_SUFFIX = (
+            f", dark navy blue to dark purple gradient background, subtle {accent} particle network "
+            f"lines and glowing dots, large bold white title prominent at top, "
+            f"{accent} neon glow accent color, dark frosted glass card panels with {accent} glowing border, "
+            f"diagram nodes in {accent} and contrasting vibrant colors with white bold labels, "
+            f"clean professional tech presentation, sharp typography, 16:9, no photographs, no people"
+        )
+        SYSTEM_PROMPT = f"""
 You write text-to-image prompts for ERNIE that produce PREMIUM DARK TECH PRESENTATION SLIDES —
-the style of high-end AI/tech conference decks: deep navy gradient background, glowing particle
+the style of high-end AI\tech conference decks: deep navy gradient background, glowing particle
 network lines, large bold white titles, frosted glass panels with neon glow borders, and
 richly labeled diagrams with vibrant colored nodes.
 
@@ -709,7 +855,7 @@ NEVER include: people, faces, scenery, abstract art, photographs, light backgrou
     ]
 
 
-def _run_images_only_background(job_id, file_path, filename, num_images, ai_color='indigo'):
+def _run_images_only_background(job_id, file_path, filename, num_images, ai_color='indigo', ai_style='dark-tech'):
     """Background worker: extract text → generate prompts → ERNIE batch API → save images."""
     import time as _time
     import base64 as _b64
@@ -737,7 +883,7 @@ def _run_images_only_background(job_id, file_path, filename, num_images, ai_colo
         update_job_status(job_id, 'generating_prompts', progress=30,
                           step='Generating image prompts',
                           step_description='Analyzing document with DeepSeek...')
-        prompt_entries = _generate_prompts_from_text(text, num_images, ai_color)
+        prompt_entries = _generate_prompts_from_text(text, num_images, ai_color, ai_style)
         if not prompt_entries:
             update_job_status(job_id, 'failed', error='No image prompts could be generated')
             return
@@ -1806,12 +1952,17 @@ def generate_ai_images_only():
         num_images = int(request.form.get('num_images', 3))
     except (ValueError, TypeError):
         num_images = 3
-    if num_images not in (1, 3, 4, 5):
+    if num_images not in range(3, 9):
         num_images = 3
 
     ai_color = request.form.get('ai_color', 'indigo')
     if ai_color not in _AI_COLOR_MAP:
         ai_color = 'indigo'
+
+    _VALID_STYLES = {'dark-tech', 'light', 'corporate', 'neon', 'minimal'}
+    ai_style = request.form.get('ai_style', 'dark-tech')
+    if ai_style not in _VALID_STYLES:
+        ai_style = 'dark-tech'
 
     job_id = str(uuid.uuid4())
     filename = secure_filename(file.filename)
@@ -1835,7 +1986,7 @@ def generate_ai_images_only():
 
     thread = threading.Thread(
         target=_run_images_only_background,
-        args=(job_id, file_path, filename, num_images, ai_color)
+        args=(job_id, file_path, filename, num_images, ai_color, ai_style)
     )
     thread.daemon = True
     thread.start()

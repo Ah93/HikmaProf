@@ -81,8 +81,8 @@ def compose_video(slide_image, avatar_video, audio_path, output_path,
         avatar_width = avatar_size
         avatar_height = avatar_size
 
-        # Resize avatar to fixed size (square for circle)
-        avatar_clip = avatar_clip.resize(newsize=(avatar_width, avatar_height))
+        # Resize avatar to fixed size (cover-crop to preserve aspect ratio)
+        avatar_clip = _cover_resize(avatar_clip, avatar_width)
 
         # Apply circular mask
         avatar_clip = avatar_clip.fl_image(apply_circular_mask)
@@ -293,6 +293,19 @@ def _apply_border_circle(frame, border_px, border_color=(255, 255, 255)):
     return np.array(canvas)
 
 
+def _cover_resize(clip, size):
+    """Resize clip to fill a square of `size` px preserving aspect ratio, then center-crop.
+    Equivalent to object-fit: cover — no squeezing or stretching."""
+    orig_w, orig_h = clip.size
+    if orig_w / orig_h > 1:   # landscape → fit by height
+        clip = clip.resize(height=size)
+    else:                      # portrait or square → fit by width
+        clip = clip.resize(width=size)
+    x1 = (clip.w - size) // 2
+    y1 = (clip.h - size) // 2
+    return clip.crop(x1=x1, y1=y1, width=size, height=size)
+
+
 def _make_panel_bg(panel_w, panel_h):
     """Deep navy vertical gradient for the side panel background."""
     t = np.linspace(0, 1, panel_h)[:, np.newaxis]
@@ -477,7 +490,7 @@ def _compose_side_panel(slide_image, audio_path, output_path, avatar_video, side
     # ── Avatar clip ──────────────────────────────────────────────
     src      = VideoFileClip(avatar_video, audio=False)
     av_clip  = src.loop(duration=duration) if src.duration < duration else src.subclip(0, duration)
-    av_clip  = av_clip.resize(newsize=(avatar_size, avatar_size))
+    av_clip  = _cover_resize(av_clip, avatar_size)
     av_clip  = av_clip.fl_image(lambda f, b=border_px: _apply_border_circle(f, b))
     mask_arr = create_circular_mask((avatar_size, avatar_size))
     av_clip  = av_clip.set_mask(ImageClip(mask_arr, ismask=True, duration=duration))
@@ -564,7 +577,7 @@ def compose_slide_video(slide_image, audio_path, output_path,
             avatar_clip   = (avatar_source.loop(duration=duration)
                              if avatar_source.duration < duration
                              else avatar_source.subclip(0, duration))
-            avatar_clip = avatar_clip.resize(newsize=(avatar_size, avatar_size))
+            avatar_clip = _cover_resize(avatar_clip, avatar_size)
             avatar_clip = avatar_clip.fl_image(
                 lambda f, b=border_px: _apply_border_circle(f, b)
             )
