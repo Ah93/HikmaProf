@@ -248,7 +248,11 @@ def generate_speech_edge(text, output_path, voice_name, language='en'):
             communicate = edge_tts.Communicate(ssml, voice_name)
             await communicate.save(output_path)
 
-        asyncio.run(_generate())
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(_generate())
+        finally:
+            loop.close()
 
         if not os.path.exists(output_path):
             raise Exception(f"Audio file was not created at {output_path}")

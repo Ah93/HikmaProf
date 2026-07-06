@@ -234,6 +234,28 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
                 for i in range(num_slides)
             ]
 
+        # Resolve language from job_meta.json (saved at job creation time)
+        _job_language = 'en'
+        _meta_path = os.path.join(job_output_dir, 'job_meta.json')
+        if os.path.exists(_meta_path):
+            try:
+                with open(_meta_path, 'r') as _mf:
+                    _meta = json.load(_mf)
+                    _job_language = _meta.get('language', 'en')
+            except Exception:
+                pass
+
+        # Pick gender-correct voice based on avatar_choice
+        _av_gender = _AVATAR_GENDER.get(avatar_choice)
+        if _av_gender is None:
+            _nl = (avatar_choice or '').lower()
+            _av_gender = 'male' if ('male' in _nl and 'female' not in _nl) else 'female'
+        if _av_gender == 'male':
+            _effective_voice = _EDGE_TTS_VOICES_MALE.get(_job_language, 'en-US-GuyNeural')
+        else:
+            _effective_voice = _EDGE_TTS_VOICES.get(_job_language, 'en-US-JennyNeural')
+        print(f'[VIDEO GEN] avatar={repr(avatar_choice)} gender={_av_gender} voice={_effective_voice} lang={_job_language}')
+
         # Generate audio files
         audio_files = []
         num_slides = len(transcript)
@@ -269,7 +291,8 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
                 text,
                 audio_path,
                 model_name=voice_choice,
-                speaker_idx=speaker_choice if speaker_choice else None
+                speaker_idx=_effective_voice,
+                language=_job_language
             )
             audio_files.append(audio_path)
 
@@ -1399,7 +1422,7 @@ def generate_presentation():
         num_images = int(request.form.get('num_images', 0))
     except (ValueError, TypeError):
         num_images = 0
-    if num_images not in (0, 1, 3, 4, 5):
+    if num_images != 0 and num_images not in range(3, 9):
         num_images = 0
 
     # AI Images mode skips the edit-slides preview entirely
@@ -1583,6 +1606,103 @@ def generate_video_only():
         'status': 'queued',
         'message': 'Video generation job queued for processing'
     }), 202
+
+
+def _extract_slides_transcript(file_path, filename):
+    """Extract slide text from PPTX or PDF into the ---‑separated format expected by _parse_transcript_for_tts."""
+    ext = filename.lower().rsplit('.', 1)[-1]
+    parts = []
+    try:
+        if ext == 'pptx':
+            from pptx import Presentation as _Prs
+            prs = _Prs(file_path)
+            for i, slide in enumerate(prs.slides, 1):
+                texts = [sh.text.strip() for sh in slide.shapes
+                         if hasattr(sh, 'text') and sh.text.strip()]
+                if texts:
+                    body = '. '.join(texts)
+                    parts.append(f"## Slide {i}\n{body}")
+        elif ext == 'pdf':
+            import pdfplumber as _pdp
+            with _pdp.open(file_path) as pdf:
+                for i, page in enumerate(pdf.pages, 1):
+                    text = (page.extract_text() or '').strip()
+                    if text:
+                        parts.append(f"## Slide {i}\n{text}")
+    except Exception as e:
+        print(f'[AVATAR-VIDEO] Transcript extraction error: {e}')
+    return '\n---\n'.join(parts) if parts else '## Slide 1\nWelcome to this presentation.'
+
+
+@app.route('/api/avatar-video', methods=['POST'])
+def avatar_video_standalone():
+    """Standalone avatar video: upload PPTX/PDF + optional script → video."""
+    if 'slides_file' not in request.files:
+        return jsonify({'error': 'No slides file provided'}), 400
+    slides_file = request.files['slides_file']
+    if not slides_file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    fname = slides_file.filename.lower()
+    if not (fname.endswith('.pptx') or fname.endswith('.pdf')):
+        return jsonify({'error': 'Only .pptx or .pdf files are supported'}), 400
+
+    avatar_choice   = request.form.get('avatar_choice', '')
+    voice_choice    = request.form.get('voice_choice', 'edge-tts')
+    speaker_choice  = request.form.get('speaker_choice', '')
+    avatar_position = request.form.get('avatar_position', 'bottom-right')
+    language        = request.form.get('language', 'en')
+
+    # Resolve voice here — unambiguous, fully logged, no risk of it changing later
+    _av_gender = _AVATAR_GENDER.get(avatar_choice)
+    if _av_gender is None:
+        _nl = (avatar_choice or '').lower()
+        _av_gender = 'male' if ('male' in _nl and 'female' not in _nl) else 'female'
+    if _av_gender == 'male':
+        tts_voice = _EDGE_TTS_VOICES_MALE.get(language, 'en-US-GuyNeural')
+    else:
+        tts_voice = _EDGE_TTS_VOICES.get(language, 'en-US-JennyNeural')
+    print(f'[AVATAR-VIDEO] avatar={repr(avatar_choice)} gender={_av_gender} voice={tts_voice} lang={language}')
+
+    job_id  = str(uuid.uuid4())
+    job_dir = os.path.join(OUTPUT_FOLDER, 'jobs', job_id)
+    os.makedirs(job_dir, exist_ok=True)
+
+    safe_name   = secure_filename(slides_file.filename)
+    slides_path = os.path.join(job_dir, safe_name)
+    slides_file.save(slides_path)
+    output_name = os.path.splitext(safe_name)[0]
+
+    transcript_text = _extract_slides_transcript(slides_path, safe_name)
+    transcript_path = os.path.join(job_dir, f'{output_name}_transcript.txt')
+    with open(transcript_path, 'w', encoding='utf-8') as _tf:
+        _tf.write(transcript_text)
+
+    print(f'[AVATAR-VIDEO] job={job_id} file={safe_name} avatar={avatar_choice} voice={voice_choice}')
+
+    with job_lock:
+        jobs[job_id] = {
+            'job_id': job_id, 'status': 'queued', 'progress': 0,
+            'filename': safe_name, 'output_name': output_name,
+            'avatar_choice': avatar_choice, 'voice_choice': voice_choice,
+            'speaker_choice': speaker_choice, 'avatar_position': avatar_position,
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'last_updated': datetime.now(timezone.utc).isoformat(),
+        }
+
+    def _run():
+        try:
+            output_path = os.path.join(job_dir, 'voice_presentation.mp4')
+            _update_voice_job(job_id, 'starting', 0)
+            _generate_voice_video_background(
+                job_id, job_dir, slides_path, transcript_path,
+                output_path, language, avatar_choice, tts_voice
+            )
+        except Exception as e:
+            print(f'[AVATAR-VIDEO] Error: {e}')
+            _update_voice_job(job_id, 'error', 0, str(e))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'job_id': job_id, 'status': 'queued'}), 202
 
 
 @app.route('/api/job/<job_id>/slide-plan', methods=['POST'])
@@ -1877,6 +1997,36 @@ def get_ernie_image(job_id, slide_idx):
     if not os.path.exists(img_path):
         return jsonify({'error': 'Image not ready yet'}), 404
     return send_file(img_path, mimetype='image/png')
+
+
+@app.route('/api/job/<job_id>/ernie-image/<int:slide_idx>', methods=['PUT'])
+def update_ernie_image(job_id, slide_idx):
+    """Save a user-edited image (base64 PNG) back to disk, replacing the original ERNIE output."""
+    import base64 as _b64
+    data = request.get_json(silent=True)
+    if not data or 'image_data' not in data:
+        return jsonify({'error': 'No image_data provided'}), 400
+
+    b64 = data['image_data']
+    if ',' in b64:
+        b64 = b64.split(',', 1)[1]
+
+    try:
+        img_bytes = _b64.b64decode(b64)
+    except Exception as e:
+        return jsonify({'error': f'Invalid base64: {e}'}), 400
+
+    ernie_dir = os.path.join(OUTPUT_FOLDER, 'jobs', job_id, 'ernie_images')
+    if not os.path.isdir(ernie_dir):
+        return jsonify({'error': 'No ERNIE images found for this job'}), 404
+
+    img_path = os.path.join(ernie_dir, f'slide_{slide_idx}.png')
+    with open(img_path, 'wb') as f:
+        f.write(img_bytes)
+
+    return jsonify({'status': 'ok', 'message': f'slide_{slide_idx}.png updated'})
+
+
 
 
 @app.route('/api/job/<job_id>/export-images/<export_format>', methods=['GET'])
@@ -2274,34 +2424,34 @@ def _parse_transcript_for_tts(transcript_path, n_slides):
     return texts[:n_slides]
 
 
-# Female neural voices per language — edge-tts (Microsoft Azure, free)
+# Female neural voices per language — standard free Microsoft Neural voices
 _EDGE_TTS_VOICES = {
-    'en': 'en-US-JennyNeural',
-    'ar': 'ar-EG-SalmaNeural',
-    'fr': 'fr-FR-DeniseNeural',
-    'es': 'es-ES-ElviraNeural',
-    'de': 'de-DE-KatjaNeural',
-    'it': 'it-IT-ElsaNeural',
-    'zh': 'zh-CN-XiaoxiaoNeural',
-    'tr': 'tr-TR-EmelNeural',
-    'pt': 'pt-BR-FranciscaNeural',
-    'ru': 'ru-RU-SvetlanaNeural',
-    'ur': 'ur-PK-UzmaNeural',
+    'en': 'en-US-JennyNeural',       # reliable, clear, free
+    'ar': 'ar-EG-SalmaNeural',       # Egyptian Arabic, clear & expressive
+    'fr': 'fr-FR-DeniseNeural',      # natural French female
+    'es': 'es-ES-ElviraNeural',      # clear Castilian Spanish
+    'de': 'de-DE-KatjaNeural',       # natural German female
+    'it': 'it-IT-ElsaNeural',        # Italian female
+    'zh': 'zh-CN-XiaoxiaoNeural',    # very natural Mandarin female
+    'tr': 'tr-TR-EmelNeural',        # Turkish female
+    'pt': 'pt-BR-FranciscaNeural',   # Brazilian Portuguese female
+    'ru': 'ru-RU-SvetlanaNeural',    # Russian female
+    'ur': 'ur-PK-UzmaNeural',        # Urdu female
 }
 
-# Male neural voices per language — edge-tts
+# Male neural voices per language — highest-naturalness Microsoft Neural voices
 _EDGE_TTS_VOICES_MALE = {
-    'en': 'en-US-GuyNeural',
-    'ar': 'ar-SA-HamedNeural',
-    'fr': 'fr-FR-HenriNeural',
-    'es': 'es-ES-AlvaroNeural',
-    'de': 'de-DE-ConradNeural',
-    'it': 'it-IT-DiegoNeural',
-    'zh': 'zh-CN-YunxiNeural',
-    'tr': 'tr-TR-AhmetNeural',
-    'pt': 'pt-BR-AntonioNeural',
-    'ru': 'ru-RU-DmitryNeural',
-    'ur': 'ur-PK-AsadNeural',
+    'en': 'en-US-GuyNeural',         # reliable, clear male, free
+    'ar': 'ar-SA-HamedNeural',       # Saudi Arabic male, authoritative
+    'fr': 'fr-FR-HenriNeural',       # natural French male
+    'es': 'es-ES-AlvaroNeural',      # clear Spanish male
+    'de': 'de-DE-ConradNeural',      # natural German male
+    'it': 'it-IT-DiegoNeural',       # Italian male
+    'zh': 'zh-CN-YunxiNeural',       # very natural Mandarin male
+    'tr': 'tr-TR-AhmetNeural',       # Turkish male
+    'pt': 'pt-BR-AntonioNeural',     # Brazilian Portuguese male
+    'ru': 'ru-RU-DmitryNeural',      # Russian male
+    'ur': 'ur-PK-AsadNeural',        # Urdu male
 }
 
 # Avatar character → gender mapping
@@ -2321,41 +2471,128 @@ _GTTS_LANG_CODES = {
 }
 
 
-def _tts_audio(text, out_path, language='en', avatar_choice=''):
+def _make_presenter_script(slide_texts, language='en'):
+    """Wrap slide narration with a natural presenter intro and outro."""
+    if not slide_texts:
+        return slide_texts
+
+    lang = language or 'en'
+
+    intros = {
+        'en': "Hello everyone! Today, I'd like to walk you through our presentation. Let's get started.",
+        'ar': "مرحباً بالجميع! اليوم، سنتناول معاً هذا العرض. تفضّلوا معي.",
+        'fr': "Bonjour à tous ! Aujourd'hui, je vous invite à découvrir cette présentation. Commençons.",
+        'es': "¡Hola a todos! Hoy les invito a explorar esta presentación juntos. ¡Empecemos!",
+        'de': "Hallo zusammen! Heute lade ich Sie ein, diese Präsentation gemeinsam zu erkunden. Legen wir los.",
+        'it': "Ciao a tutti! Oggi vi invito a scoprire questa presentazione insieme. Iniziamo.",
+        'zh': "大家好！今天，让我带领大家一起了解这份演示文稿。让我们开始吧。",
+        'tr': "Herkese merhaba! Bugün sizleri bu sunumla tanıştırmak istiyorum. Başlayalım.",
+        'pt': "Olá a todos! Hoje, convido vocês a explorar esta apresentação comigo. Vamos começar.",
+        'ru': "Всем привет! Сегодня я приглашаю вас познакомиться с нашей презентацией. Давайте начнём.",
+        'ur': "السلام علیکم! آج میں آپ کو اس پریزنٹیشن سے روشناس کرانا چاہتا ہوں۔ شروع کرتے ہیں۔",
+    }
+
+    outros = {
+        'en': "Thank you all for your attention. I hope this presentation was informative and valuable.",
+        'ar': "شكراً جزيلاً لاهتمامكم. أتمنى أن يكون هذا العرض مفيداً وقيّماً.",
+        'fr': "Merci à tous pour votre attention. J'espère que cette présentation vous a été utile et enrichissante.",
+        'es': "Muchas gracias por su atención. Espero que esta presentación haya sido informativa y valiosa.",
+        'de': "Vielen Dank für Ihre Aufmerksamkeit. Ich hoffe, diese Präsentation war informativ und hilfreich.",
+        'it': "Grazie a tutti per la vostra attenzione. Spero che questa presentazione sia stata utile e arricchente.",
+        'zh': "感谢大家的关注。希望这次演示对您有所帮助和启发。谢谢！",
+        'tr': "Dikkatiniz için herkese teşekkürler. Bu sunumun faydalı ve bilgilendirici olduğunu umuyorum.",
+        'pt': "Muito obrigado pela atenção de todos. Espero que esta apresentação tenha sido útil e enriquecedora.",
+        'ru': "Спасибо всем за внимание. Надеюсь, эта презентация была полезной и информативной.",
+        'ur': "آپ سب کا شکریہ۔ امید ہے کہ یہ پریزنٹیشن معلوماتی اور قیمتی رہی۔",
+    }
+
+    intro = intros.get(lang, intros['en'])
+    outro = outros.get(lang, outros['en'])
+
+    result = list(slide_texts)
+    result[0] = f"{intro} {result[0]}"
+    result[-1] = f"{result[-1]} {outro}"
+    return result
+
+
+def _clean_text_for_tts(text):
+    """Strip markdown and formatting artifacts so TTS reads naturally."""
+    import re
+    text = re.sub(r'#+\s*', '', text)                   # remove ## headers
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)        # **bold** → bold
+    text = re.sub(r'\*(.+?)\*', r'\1', text)            # *italic* → italic
+    text = re.sub(r'`(.+?)`', r'\1', text)              # `code` → code
+    text = re.sub(r'^\s*[-•*]\s+', '', text, flags=re.MULTILINE)   # bullets
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)   # numbered lists
+    text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)     # [link text](url) → text
+    text = re.sub(r'\n{2,}', ' ', text)                 # collapse blank lines
+    text = re.sub(r'\n', ' ', text)                     # remaining newlines → space
+    text = re.sub(r'\s{2,}', ' ', text)                 # collapse spaces
+    return text.strip()
+
+
+def _tts_audio(text, out_path, language='en', avatar_choice='', tts_voice=''):
     """Generate MP3 audio for *text*, picking a voice that matches the avatar gender.
 
     Priority:
       1. edge-tts  — Microsoft Azure neural voices (best quality, free, no key)
       2. gTTS      — Google TTS (decent fallback, robotic but reliable)
       3. silence   — 3-second silent MP3 so video still renders
+
+    If tts_voice is supplied it is used directly, bypassing gender detection.
     """
     lang = language or 'en'
-    gender = _AVATAR_GENDER.get(avatar_choice, 'female')
-    if gender == 'male':
-        edge_voice = _EDGE_TTS_VOICES_MALE.get(lang, 'en-US-GuyNeural')
+    clean = _clean_text_for_tts(text) or text
+
+    if tts_voice:
+        edge_voice = tts_voice
     else:
-        edge_voice = _EDGE_TTS_VOICES.get(lang, 'en-US-JennyNeural')
+        # Gender: dict lookup first, then name-based fallback
+        gender = _AVATAR_GENDER.get(avatar_choice)
+        if gender is None:
+            name_lower = (avatar_choice or '').lower()
+            gender = 'male' if ('male' in name_lower and 'female' not in name_lower) else 'female'
+        if gender == 'male':
+            edge_voice = _EDGE_TTS_VOICES_MALE.get(lang, 'en-US-GuyNeural')
+        else:
+            edge_voice = _EDGE_TTS_VOICES.get(lang, 'en-US-JennyNeural')
+
+    print(f'[VOICE VIDEO] voice={edge_voice}  lang={lang}  avatar={repr(avatar_choice)}')
 
     # ── 1. edge-tts (primary) ─────────────────────────────────────────────────
     try:
         import asyncio
         import edge_tts
+        print(f'[VOICE VIDEO] edge-tts available, attempting voice={edge_voice}')
 
         async def _run_edge():
-            communicate = edge_tts.Communicate(text, edge_voice, rate="-15%")
+            communicate = edge_tts.Communicate(
+                clean, edge_voice,
+                rate='-5%',
+                volume='+10%',
+                pitch='+0Hz',
+            )
             await asyncio.wait_for(communicate.save(out_path), timeout=60)
 
-        asyncio.run(_run_edge())
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(_run_edge())
+        finally:
+            loop.close()
         print(f'[VOICE VIDEO] edge-tts OK  voice={edge_voice}  lang={lang}')
         return
+    except ImportError:
+        print(f'[VOICE VIDEO] edge-tts NOT INSTALLED — install with: pip install edge-tts')
     except Exception as edge_err:
-        print(f'[VOICE VIDEO] edge-tts failed ({edge_err}), falling back to gTTS…')
+        import traceback
+        print(f'[VOICE VIDEO] edge-tts FAILED voice={edge_voice}: {edge_err}')
+        traceback.print_exc()
 
     # ── 2. gTTS (fallback) ────────────────────────────────────────────────────
     try:
         from gtts import gTTS
         gtts_lang = _GTTS_LANG_CODES.get(lang, 'en')
-        tts = gTTS(text=text, lang=gtts_lang, slow=False)
+        tts = gTTS(text=clean, lang=gtts_lang, slow=False)
         tts.save(out_path)
         print(f'[VOICE VIDEO] gTTS OK  lang={gtts_lang}')
         return
@@ -2423,7 +2660,7 @@ def _update_voice_job(job_id, status, progress, error=''):
         voice_video_jobs[job_id] = {'status': status, 'progress': progress, 'error': error}
 
 
-def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en', avatar_choice=''):
+def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en', avatar_choice='', tts_voice=''):
     """Full pipeline: PPTX → slide images → TTS audio → compose clips → concatenate."""
     try:
         import fitz  # PyMuPDF
@@ -2466,6 +2703,7 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
         # ── Step 3: Parse transcript ──────────────────────────────────────────
         _update_voice_job(job_id, 'parsing_transcript', 22)
         slide_texts = _parse_transcript_for_tts(transcript_path, n_slides)
+        slide_texts = _make_presenter_script(slide_texts, language)
         print(f'[VOICE VIDEO] Parsed {len(slide_texts)} transcript blocks')
 
         # ── Step 4: TTS audio per slide ───────────────────────────────────────
@@ -2474,7 +2712,7 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
             _update_voice_job(job_id, 'generating_voice', 25 + int((i / n_slides) * 40))
             print(f'[VOICE VIDEO] TTS slide {i + 1}/{n_slides}…')
             audio_path = os.path.join(work_dir, f'audio_{i + 1:03d}.mp3')
-            _tts_audio(text, audio_path, language=language, avatar_choice=avatar_choice)
+            _tts_audio(text, audio_path, language=language, avatar_choice=avatar_choice, tts_voice=tts_voice)
             audio_files.append(audio_path)
 
         # ── Step 5: Compose one video clip per slide ──────────────────────────

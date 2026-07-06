@@ -3361,4 +3361,183 @@ let desktopUI;
 document.addEventListener('DOMContentLoaded', () => {
     desktopUI = new DesktopUI();
     window.desktopUI = desktopUI; // Make it globally accessible
+    setupAvatarVideoTab();
 });
+
+// ── Avatar Video Tab ──────────────────────────────────────────────────────────
+
+function avOnFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const icon = document.getElementById('avSlidesIcon');
+    const text = document.getElementById('avSlidesText');
+    if (icon) icon.textContent = file.name.endsWith('.pdf') ? '📄' : '📊';
+    if (text) text.textContent = file.name;
+}
+
+function setupAvatarVideoTab() {
+    const form = document.getElementById('avatarVideoForm');
+    if (!form) return;
+
+    // Drag-and-drop on the drop zone
+    const zone = document.getElementById('avSlidesDropZone');
+    if (zone) {
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#6366f1'; });
+        zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+        zone.addEventListener('drop', e => {
+            e.preventDefault(); zone.style.borderColor = '';
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const input = document.getElementById('avSlidesInput');
+                const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+                avOnFileSelect(input);
+            }
+        });
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const fileInput = document.getElementById('avSlidesInput');
+        if (!fileInput.files.length) { alert('Please upload a PPTX or PDF file.'); return; }
+
+        const btn = document.getElementById('avGenerateBtn');
+        const progressDiv = document.getElementById('avProgress');
+        const resultDiv   = document.getElementById('avResult');
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Submitting...';
+        if (progressDiv) progressDiv.style.display = 'block';
+        if (resultDiv)   resultDiv.style.display   = 'none';
+
+        const startTime = Date.now();
+        const timerEl = document.getElementById('avTimer');
+        if (timerEl) timerEl.textContent = '⏱ 0:00';
+
+        try {
+            const fd = new FormData(form);
+
+            // Read avatar_choice directly from the selected card — more reliable than
+            // depending on the hidden input being updated by selectAvatar().
+            const selectedCard = document.querySelector('#avatarGalleryAV .hikma-avatar-option.selected');
+            const avatarVal = selectedCard ? (selectedCard.getAttribute('data-avatar') || '') : '';
+            fd.set('avatar_choice', avatarVal);
+            console.log('[AvatarVideo] Submitting avatar_choice =', JSON.stringify(avatarVal), '| language =', fd.get('language'));
+
+            const resp = await fetch(`${APP_PREFIX}/api/avatar-video`, { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                alert(data.error || 'Failed to start video generation');
+                btn.disabled = false; btn.textContent = '🎬 Generate Avatar Video';
+                if (progressDiv) progressDiv.style.display = 'none';
+                return;
+            }
+
+            btn.textContent = '⏳ Generating...';
+            await pollAvatarVideoStatus(data.job_id, startTime);
+
+        } catch (err) {
+            alert('Error: ' + err.message);
+            btn.disabled = false; btn.textContent = '🎬 Generate Avatar Video';
+            if (progressDiv) progressDiv.style.display = 'none';
+        }
+    });
+}
+
+function _avFormatElapsed(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return mins > 0
+        ? `${mins}m ${secs}s`
+        : `${secs}s`;
+}
+
+async function pollAvatarVideoStatus(jobId, startTime) {
+    const statusEl   = document.getElementById('avProgressStatus');
+    const stepEl     = document.getElementById('avProgressStep');
+    const barEl      = document.getElementById('avProgressBar');
+    const pctEl      = document.getElementById('avProgressPct');
+    const timerEl    = document.getElementById('avTimer');
+    const timeSpentEl = document.getElementById('avTimeSpent');
+    const resultDiv  = document.getElementById('avResult');
+    const btn        = document.getElementById('avGenerateBtn');
+
+    const t0 = startTime || Date.now();
+
+    // Live clock: ticks every second
+    const timerInterval = setInterval(() => {
+        const elapsed = Date.now() - t0;
+        const totalSec = Math.floor(elapsed / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        const display = mins > 0
+            ? `${mins}:${String(secs).padStart(2, '0')}`
+            : `0:${String(secs).padStart(2, '0')}`;
+        if (timerEl) timerEl.textContent = `⏱ ${display}`;
+    }, 1000);
+
+    const stageLabels = {
+        queued:             'Queued…',
+        video_generation:   'Generating video…',
+        converting_slides:  'Converting slides…',
+        parsing_transcript: 'Reading script…',
+        generating_voice:   'Generating voice…',
+        composing_video:    'Composing video…',
+        finalizing:         'Finalising…',
+        completed:          'Done!',
+        failed:             'Failed',
+    };
+
+    for (let i = 0; i < 720; i++) {
+        await new Promise(r => setTimeout(r, 2500));
+        try {
+            const resp = await fetch(`${APP_PREFIX}/api/job/${jobId}/voice-video/status`);
+            const data = await resp.json();
+
+            const pct   = data.progress || 0;
+            const label = stageLabels[data.status] || data.status || '…';
+            if (statusEl) statusEl.textContent = label;
+            if (stepEl)   stepEl.textContent   = data.step_description || '';
+            if (barEl)    barEl.style.width     = pct + '%';
+            if (pctEl)    pctEl.textContent     = pct + '%';
+
+            if (data.status === 'done' || pct >= 100) {
+                clearInterval(timerInterval);
+                const elapsed = _avFormatElapsed(Date.now() - t0);
+                if (timerEl) timerEl.textContent = `⏱ ${elapsed}`;
+
+                if (statusEl) statusEl.textContent = '✅ Complete!';
+                if (barEl)    barEl.style.width = '100%';
+                if (pctEl)    pctEl.textContent = '100%';
+                if (timeSpentEl) timeSpentEl.textContent = `Generated in ${elapsed}`;
+
+                if (resultDiv) resultDiv.style.display = 'block';
+                const dlBtn = document.getElementById('avDownloadBtn');
+                if (dlBtn) {
+                    dlBtn.onclick = () => {
+                        const a = document.createElement('a');
+                        a.href = `${APP_PREFIX}/api/job/${jobId}/voice-video/download`;
+                        a.download = `avatar-video-${jobId}.mp4`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                    };
+                }
+                if (btn) { btn.disabled = false; btn.textContent = '🎬 Generate Avatar Video'; }
+                break;
+            }
+
+            if (data.status === 'failed') {
+                clearInterval(timerInterval);
+                const elapsed = _avFormatElapsed(Date.now() - t0);
+                if (timerEl) timerEl.textContent = `⏱ ${elapsed}`;
+                if (statusEl) statusEl.textContent = '❌ Failed';
+                if (stepEl)   stepEl.textContent   = data.error || 'Video generation failed.';
+                if (btn) { btn.disabled = false; btn.textContent = '🎬 Generate Avatar Video'; }
+                break;
+            }
+        } catch (err) {
+            console.error('[AvatarVideo] Poll error:', err);
+        }
+    }
+}

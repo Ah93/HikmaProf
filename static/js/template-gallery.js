@@ -361,6 +361,11 @@ class TemplateGallery {
         const btn = document.getElementById('generateWithImagesBtn');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting...'; }
 
+        // Clear any previous session result
+        this._lastAiJob = null;
+        const viewBtn = document.getElementById('viewLastResultsBtn');
+        if (viewBtn) viewBtn.style.display = 'none';
+
         this._showAiImagesModal(numImages);
 
         const apiBase = (window.APP_PREFIX || '') + '/api/generate-ai-images';
@@ -435,6 +440,27 @@ class TemplateGallery {
                     </div>
                 </div>
 
+                <!-- Live timing bar — shown once ERNIE starts -->
+                <div class="aim-timing" id="aimTiming" style="display:none;">
+                    <div class="aim-timing-row">
+                        <div class="aim-timing-stat">
+                            <span class="aim-timing-lbl">⏱ Elapsed</span>
+                            <span class="aim-timing-val" id="aimElapsed">0:00</span>
+                        </div>
+                        <div class="aim-timing-stat">
+                            <span class="aim-timing-lbl">🖼 Avg / image</span>
+                            <span class="aim-timing-val" id="aimImgTime">—</span>
+                        </div>
+                        <div class="aim-timing-stat" style="flex:1;">
+                            <span class="aim-timing-lbl">📊 Images done</span>
+                            <span class="aim-timing-val" id="aimProgressText">0 / ?</span>
+                        </div>
+                    </div>
+                    <div class="aim-progress-track">
+                        <div class="aim-progress-fill" id="aimProgressFill" style="width:0%"></div>
+                    </div>
+                </div>
+
                 <div class="aim-grid" id="aimGrid">${slots}</div>
 
                 <div class="aim-download" id="aimDownload"></div>
@@ -455,33 +481,80 @@ class TemplateGallery {
         const displayedImages = new Set();
         let slotsInitialised = numImages;
 
+        // ── Timing state ──────────────────────────────────────────────────────
+        const startTime    = Date.now();
+        let ernieStart     = null;   // when ERNIE phase began
+        let prevDone       = 0;
+        let completionTimes = [];    // seconds each image took (cumulative avg)
+        let timerInterval  = null;
+
+        const fmt = (ms) => {
+            const s = Math.floor(ms / 1000);
+            return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        };
+
+        // Start elapsed timer immediately from job submission
+        timerInterval = setInterval(() => {
+            const el = document.getElementById('aimElapsed');
+            if (el) el.textContent = fmt(Date.now() - startTime);
+        }, 1000);
+
+        const showTimingBar = () => {
+            const timingEl = document.getElementById('aimTiming');
+            if (timingEl) timingEl.style.display = 'block';
+        };
+
+        const stopTimer = () => {
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        };
+        // ─────────────────────────────────────────────────────────────────────
+
         const poll = async () => {
             try {
                 const resp = await fetch(`/api/job/${jobId}`);
                 const job  = await resp.json();
                 const subtitle = document.getElementById('aimSubtitle');
 
-                // Step 1 — extracting document text
+                // Step 1 — extracting
                 if (job.status === 'queued' || job.status === 'extracting') {
                     this._aimStep(1, 'active', 'Reading document...');
                     if (subtitle) subtitle.textContent = 'Extracting text from your document...';
                 }
 
-                // Step 2 — generating prompts with DeepSeek
+                // Step 2 — prompts
                 if (job.status === 'generating_prompts') {
                     this._aimStep(1, 'done', 'Document extracted ✓');
                     this._aimStep(2, 'active', 'DeepSeek analyzing content...');
                     if (subtitle) subtitle.textContent = 'Generating visual prompts from document content...';
                 }
 
-                // Step 3 — ERNIE generating images
+                // Step 3 — ERNIE images
                 if (job.status === 'generating_images' || (job.ernie_total > 0 && job.status !== 'completed')) {
+                    if (!ernieStart) { ernieStart = Date.now(); showTimingBar(); }
+
                     this._aimStep(1, 'done', 'Document extracted ✓');
                     this._aimStep(2, 'done', 'Prompts ready ✓');
                     const done  = job.ernie_done  || 0;
                     const total = job.ernie_total || numImages;
                     this._aimStep(3, done < total ? 'active' : 'done', `${done} / ${total} images ready`);
                     if (subtitle) subtitle.textContent = `Creating AI images — ${done} of ${total} complete`;
+
+                    // Track per-image timing
+                    if (done > prevDone && ernieStart) {
+                        const secPerImg = Math.round((Date.now() - ernieStart) / done / 1000);
+                        completionTimes.push(secPerImg);
+                        const avgSec = Math.round(completionTimes.reduce((a,b)=>a+b,0) / completionTimes.length);
+                        const imgEl = document.getElementById('aimImgTime');
+                        if (imgEl) imgEl.textContent = `~${avgSec}s`;
+                        prevDone = done;
+                    }
+
+                    // Update progress bar
+                    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+                    const fill = document.getElementById('aimProgressFill');
+                    const prog = document.getElementById('aimProgressText');
+                    if (fill) fill.style.width = pct + '%';
+                    if (prog) prog.textContent = `${done} / ${total}`;
 
                     if (total !== slotsInitialised) {
                         slotsInitialised = total;
@@ -491,27 +564,55 @@ class TemplateGallery {
                     (job.ernie_slides || []).forEach((slideIdx, i) => {
                         if (!displayedImages.has(slideIdx)) {
                             displayedImages.add(slideIdx);
-                            this._aimRevealImage(jobId, slideIdx, i);
+                            const secEach = completionTimes.length > 0
+                                ? Math.round(completionTimes.reduce((a,b)=>a+b,0)/completionTimes.length)
+                                : null;
+                            this._aimRevealImage(jobId, slideIdx, i, secEach);
                         }
                     });
                 }
 
                 if (job.status === 'completed') {
+                    stopTimer();
+                    const totalSec  = Math.round((Date.now() - startTime) / 1000);
+                    const timeStr   = totalSec >= 60
+                        ? `${Math.floor(totalSec/60)}m ${totalSec%60}s`
+                        : `${totalSec}s`;
+
                     this._aimStep(1, 'done', 'Document extracted ✓');
                     this._aimStep(2, 'done', 'Prompts ready ✓');
                     this._aimStep(3, 'done', `${slotsInitialised} images generated ✓`);
-                    if (subtitle) subtitle.textContent = '✅ Your AI images are ready!';
+                    if (subtitle) subtitle.textContent = `✅ Done in ${timeStr}!`;
+
+                    // Final timer freeze
+                    const el = document.getElementById('aimElapsed');
+                    if (el) el.textContent = fmt(Date.now() - startTime);
+                    const fill = document.getElementById('aimProgressFill');
+                    const prog = document.getElementById('aimProgressText');
+                    if (fill) fill.style.width = '100%';
+                    if (prog) prog.textContent = `${slotsInitialised} / ${slotsInitialised}`;
 
                     (job.ernie_slides || []).forEach((slideIdx, i) => {
                         if (!displayedImages.has(slideIdx)) {
                             displayedImages.add(slideIdx);
-                            this._aimRevealImage(jobId, slideIdx, i);
+                            this._aimRevealImage(jobId, slideIdx, i, null);
                         }
                     });
 
-                    // Inject download buttons into the aim-download container
                     const dl = document.getElementById('aimDownload');
                     if (dl && !document.getElementById('aimDlPptx')) {
+                        const slideIndices = job.ernie_slides || [];
+
+                        // Save session result so modal can be reopened after close
+                        const avgSec = completionTimes.length > 0
+                            ? `~${Math.round(completionTimes.reduce((a,b)=>a+b,0)/completionTimes.length)}s`
+                            : '—';
+                        this._lastAiJob = {
+                            jobId, slideIndices, numImages: slotsInitialised,
+                            totalTime: fmt(Date.now() - startTime),
+                            avgImgTime: avgSec,
+                        };
+
                         dl.innerHTML = `
                             <a id="aimDlPptx" class="aim-download-btn"
                                href="/api/job/${jobId}/export-images/pptx" download>
@@ -521,8 +622,12 @@ class TemplateGallery {
                                href="/api/job/${jobId}/export-images/pdf" download>
                                 ⬇ Download PDF
                             </a>
+                            <button class="aim-download-btn aim-download-btn-magic"
+                                    onclick="templateGallery.openMagicLayout('${jobId}', ${JSON.stringify(slideIndices)})">
+                                🎨 Magic Layout
+                            </button>
                             <button class="aim-close-btn"
-                                    onclick="document.getElementById('aiImagesModal').remove()">
+                                    onclick="templateGallery._closeAiModal()">
                                 Close
                             </button>`;
                         dl.style.display = 'flex';
@@ -531,12 +636,14 @@ class TemplateGallery {
                 }
 
                 if (job.status === 'failed') {
+                    stopTimer();
                     this._aiModalError(job.error || 'Generation failed');
                     return;
                 }
 
                 attempts++;
                 if (attempts < maxAttempts) setTimeout(poll, 1500);
+                else stopTimer();
 
             } catch (err) {
                 console.error('[AI Images] Poll error:', err);
@@ -568,7 +675,7 @@ class TemplateGallery {
         }
     }
 
-    _aimRevealImage(jobId, slideIdx, cardIndex) {
+    _aimRevealImage(jobId, slideIdx, cardIndex, durationSec) {
         const card = document.getElementById(`aim-card-${cardIndex}`);
         if (!card) return;
         const img = document.createElement('img');
@@ -579,15 +686,81 @@ class TemplateGallery {
             card.classList.add('aim-has-image');
             card.innerHTML = '';
             card.appendChild(img);
+
             const lbl = document.createElement('span');
             lbl.className = 'aim-card-label';
             lbl.textContent = `Slide ${slideIdx + 1}`;
             card.appendChild(lbl);
+
+            if (durationSec) {
+                const badge = document.createElement('div');
+                badge.className = 'aim-time-badge';
+                badge.textContent = `⏱ ${durationSec}s`;
+                card.appendChild(badge);
+            }
+
         };
         img.onerror = () => {
-            // Image not yet saved — retry after 2s
-            setTimeout(() => this._aimRevealImage(jobId, slideIdx, cardIndex), 2000);
+            setTimeout(() => this._aimRevealImage(jobId, slideIdx, cardIndex, durationSec), 2000);
         };
+    }
+
+    _closeAiModal() {
+        document.getElementById('aiImagesModal')?.remove();
+        if (this._lastAiJob) {
+            const btn = document.getElementById('viewLastResultsBtn');
+            if (btn) btn.style.display = 'block';
+        }
+    }
+
+
+    reopenAiModal() {
+        if (!this._lastAiJob) return;
+        const { jobId, slideIndices, numImages, totalTime, avgImgTime } = this._lastAiJob;
+
+        this._showAiImagesModal(numImages);
+
+        // Show timing bar immediately with stored final values
+        const timing = document.getElementById('aimTiming');
+        if (timing) timing.style.display = 'block';
+        const elapsedEl = document.getElementById('aimElapsed');
+        const imgTEl    = document.getElementById('aimImgTime');
+        const fill      = document.getElementById('aimProgressFill');
+        const prog      = document.getElementById('aimProgressText');
+        if (elapsedEl) elapsedEl.textContent = totalTime  || '—';
+        if (imgTEl)    imgTEl.textContent    = avgImgTime || '—';
+        if (fill)      fill.style.width      = '100%';
+        if (prog)      prog.textContent      = `${slideIndices.length} / ${slideIndices.length}`;
+
+        setTimeout(() => {
+            this._aimStep(1, 'done', 'Document extracted ✓');
+            this._aimStep(2, 'done', 'Prompts ready ✓');
+            this._aimStep(3, 'done', `${slideIndices.length} images generated ✓`);
+
+            const subtitle = document.getElementById('aimSubtitle');
+            if (subtitle) subtitle.textContent = '✅ Your AI images are ready!';
+
+            // Reveal all images
+            slideIndices.forEach((slideIdx, i) => {
+                this._aimRevealImage(jobId, slideIdx, i, null);
+            });
+
+            // Download buttons
+            const dl = document.getElementById('aimDownload');
+            if (dl) {
+                dl.innerHTML = `
+                    <a id="aimDlPptx" class="aim-download-btn"
+                       href="/api/job/${jobId}/export-images/pptx" download>⬇ Download PPTX</a>
+                    <a id="aimDlPdf" class="aim-download-btn aim-download-btn-pdf"
+                       href="/api/job/${jobId}/export-images/pdf" download>⬇ Download PDF</a>
+                    <button class="aim-download-btn aim-download-btn-magic"
+                            onclick="templateGallery.openMagicLayout('${jobId}', ${JSON.stringify(slideIndices)})">
+                        🎨 Magic Layout
+                    </button>
+                    <button class="aim-close-btn" onclick="templateGallery._closeAiModal()">Close</button>`;
+                dl.style.display = 'flex';
+            }
+        }, 100);
     }
 
     _aiModalError(msg) {
@@ -688,14 +861,457 @@ class TemplateGallery {
         .aim-download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
         .aim-download-btn-pdf { background: linear-gradient(135deg, #ef4444, #f97316); }
         .aim-download-btn-pdf:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
+        .aim-download-btn-magic { background: linear-gradient(135deg, #0ea5e9, #06b6d4); border: none; cursor: pointer; }
+        .aim-download-btn-magic:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(6,182,212,0.4); }
         .aim-close-btn {
             padding: 12px 20px; border-radius: 10px;
             border: 2px solid #e2e8f0; background: #fff;
             color: #64748b; font-weight: 600; cursor: pointer;
         }
         .aim-error { color: #ef4444; margin-top: 12px; }
+        .aim-timing {
+            background: linear-gradient(135deg,#f0f4ff,#faf5ff);
+            border: 1px solid #e0e7ff; border-radius: 12px;
+            padding: 14px 18px; margin-bottom: 20px;
+        }
+        .aim-timing-row { display: flex; gap: 28px; margin-bottom: 12px; flex-wrap: wrap; }
+        .aim-timing-stat { display: flex; flex-direction: column; gap: 2px; }
+        .aim-timing-lbl { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+        .aim-timing-val { font-size: 1.1rem; font-weight: 800; color: #1e293b; font-variant-numeric: tabular-nums; }
+        .aim-progress-track { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .aim-progress-fill {
+            height: 100%; border-radius: 999px; transition: width 0.6s ease;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7);
+        }
+        .aim-time-badge {
+            position: absolute; top: 6px; right: 6px;
+            background: rgba(0,0,0,0.65); color: #fff;
+            font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700;
+        }
+
+        /* ── Magic Layout Modal ────────────────────────────────────────────── */
+        .ml-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .ml-modal {
+            background: #0f172a; border-radius: 16px;
+            width: 95vw; max-width: 1300px; height: 90vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+        }
+        .ml-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 24px; border-bottom: 1px solid #1e293b;
+            flex-shrink: 0;
+        }
+        .ml-header-title { color: #f1f5f9; font-size: 18px; font-weight: 700; }
+        .ml-header-sub   { color: #64748b; font-size: 13px; margin-top: 2px; }
+        .ml-header-actions { display: flex; gap: 10px; align-items: center; }
+        .ml-btn-save {
+            padding: 9px 22px; border-radius: 8px; border: none; cursor: pointer;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff; font-weight: 700; font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        .ml-btn-save:hover { opacity: 0.85; }
+        .ml-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+        .ml-btn-close {
+            padding: 9px 18px; border-radius: 8px; cursor: pointer;
+            background: #1e293b; border: 1px solid #334155;
+            color: #94a3b8; font-weight: 600; font-size: 14px;
+        }
+        .ml-btn-close:hover { background: #334155; }
+        .ml-body {
+            display: flex; flex: 1; overflow: hidden;
+        }
+        .ml-sidebar {
+            width: 180px; flex-shrink: 0;
+            background: #0a0f1e; border-right: 1px solid #1e293b;
+            overflow-y: auto; padding: 12px 8px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .ml-thumb {
+            position: relative; border-radius: 8px; overflow: hidden;
+            border: 2px solid transparent; cursor: pointer; transition: border-color 0.2s;
+            aspect-ratio: 4/3; background: #1e293b;
+        }
+        .ml-thumb:hover   { border-color: #6366f1; }
+        .ml-thumb.active  { border-color: #22d3ee; }
+        .ml-thumb img     { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ml-thumb-label {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.6); color: #e2e8f0; font-size: 10px;
+            text-align: center; padding: 3px;
+        }
+        .ml-thumb-saved {
+            position: absolute; top: 4px; right: 4px;
+            background: #22c55e; color: #fff; font-size: 10px;
+            padding: 2px 6px; border-radius: 4px; font-weight: 700;
+        }
+        .ml-editor-area {
+            flex: 1; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .ml-editor-toolbar {
+            padding: 8px 16px; background: #0a0f1e; border-bottom: 1px solid #1e293b;
+            display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+        }
+        .ml-editor-hint { color: #64748b; font-size: 13px; }
+        .ml-editor-wrap {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; background: #111827; position: relative;
+        }
+        #mlEditorContainer { width: 100%; height: 100%; }
+        .ml-placeholder {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #475569; gap: 12px; user-select: none;
+        }
+        .ml-placeholder-icon { font-size: 48px; }
+        .ml-placeholder-text { font-size: 15px; }
+        .ml-save-status {
+            padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+            display: none;
+        }
+        .ml-save-status.ok    { display: inline-block; background: #166534; color: #4ade80; }
+        .ml-save-status.error { display: inline-block; background: #7f1d1d; color: #fca5a5; }
+        .ml-tool-btn {
+            padding: 5px 11px; border: 1px solid #334155; border-radius: 6px;
+            background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 12px;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .ml-tool-btn:hover  { background: #334155; color: #f1f5f9; }
+        .ml-tool-btn.active { background: #6366f1; color: #fff; border-color: #6366f1; }
         `;
         document.head.appendChild(s);
+    }
+
+    // ── Magic Layout ───────────────────────────────────────────────────────────
+    openMagicLayout(jobId, slideIndices) {
+        document.getElementById('mlOverlay')?.remove();
+
+        this._mlJobId       = jobId;
+        this._mlSlides      = slideIndices;
+        this._mlFabric      = null;
+        this._mlActiveSlide = null;
+        this._mlHistory     = [];
+        this._mlSaved       = new Set();
+
+        const thumbs = slideIndices.map((idx, i) => `
+            <div class="ml-thumb" id="ml-thumb-${idx}" onclick="templateGallery._mlSelectSlide(${idx})">
+                <img src="/api/job/${jobId}/ernie-image/${idx}?t=${Date.now()}" alt="Slide ${i+1}">
+                <div class="ml-thumb-label">Slide ${i + 1}</div>
+            </div>`).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'mlOverlay';
+        overlay.className = 'ml-overlay';
+        overlay.innerHTML = `
+            <div class="ml-modal">
+                <div class="ml-header">
+                    <div>
+                        <div class="ml-header-title">🎨 Magic Layout — Image Editor</div>
+                        <div class="ml-header-sub">Select a slide thumbnail to edit, then save your changes</div>
+                    </div>
+                    <div class="ml-header-actions">
+                        <span class="ml-save-status" id="mlSaveStatus"></span>
+                        <button class="ml-btn-save" id="mlBtnSave" disabled onclick="templateGallery._mlSave()">
+                            💾 Save Changes
+                        </button>
+                        <a class="ml-btn-save" style="text-decoration:none;background:linear-gradient(135deg,#059669,#10b981)"
+                           href="/api/job/${jobId}/export-images/pptx" download>
+                            ⬇ Download PPTX
+                        </a>
+                        <button class="ml-btn-close" onclick="document.getElementById('mlOverlay').remove()">✕ Close</button>
+                    </div>
+                </div>
+                <div class="ml-body">
+                    <div class="ml-sidebar">${thumbs}</div>
+                    <div class="ml-editor-area">
+                        <div class="ml-editor-wrap">
+                            <div id="mlEditorContainer"></div>
+                            <div class="ml-placeholder" id="mlPlaceholder">
+                                <div class="ml-placeholder-icon">🖼️</div>
+                                <div class="ml-placeholder-text">Click a slide on the left to start editing</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        // Create editor ONCE after modal is in the DOM
+        setTimeout(() => this._mlInitEditor(), 150);
+    }
+
+    _mlInitEditor() {
+        const container = document.getElementById('mlEditorContainer');
+        if (!container || this._mlFabric) return;
+
+        const wrap = container.closest('.ml-editor-wrap');
+        const w = Math.max(wrap ? wrap.clientWidth  - 20 : 880, 600);
+        const h = Math.max(wrap ? wrap.clientHeight - 60 : 480, 400);
+
+        container.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:0;';
+        container.innerHTML = `
+            <div style="display:flex;gap:8px;align-items:center;background:#0a0f1e;padding:8px 12px;
+                        width:${w}px;box-sizing:border-box;border-radius:8px 8px 0 0;flex-wrap:wrap;border-bottom:1px solid #1e293b;">
+                <button onclick="templateGallery._mlTool('draw')"   class="ml-tool-btn active" id="ml-t-draw">✏️ Draw</button>
+                <button onclick="templateGallery._mlTool('select')" class="ml-tool-btn"        id="ml-t-select">👆 Select</button>
+                <button onclick="templateGallery._mlTool('text')"   class="ml-tool-btn"        id="ml-t-text">T Text</button>
+                <button onclick="templateGallery._mlTool('rect')"   class="ml-tool-btn"        id="ml-t-rect">▭ Cover</button>
+                <span style="width:1px;background:#334155;height:22px;"></span>
+                <input type="color" id="mlColor" value="#ff0000" title="Color"
+                       style="width:30px;height:28px;border:2px solid #334155;border-radius:4px;cursor:pointer;background:none;padding:1px;"
+                       oninput="templateGallery._mlColorChange(this.value)">
+                <span style="color:#64748b;font-size:12px;">Size</span>
+                <input type="range" id="mlBrushSize" min="1" max="50" value="6" style="width:70px;"
+                       oninput="templateGallery._mlBrushSize(this.value)">
+                <span style="width:1px;background:#334155;height:22px;"></span>
+                <button onclick="templateGallery._mlUndo()"         class="ml-tool-btn">↩ Undo</button>
+                <button onclick="templateGallery._mlClearDrawing()" class="ml-tool-btn" style="color:#f87171;">🗑 Clear</button>
+            </div>
+            <canvas id="mlCanvas" width="${w}" height="${h}"
+                    style="display:block;border:1px solid #1e293b;border-top:none;"></canvas>
+        `;
+
+        this._mlFabric = new fabric.Canvas('mlCanvas', { isDrawingMode: true });
+        this._mlFabric.freeDrawingBrush.color = '#ff0000';
+        this._mlFabric.freeDrawingBrush.width = 6;
+        this._mlFabric.on('object:added',    () => this._mlSnap());
+        this._mlFabric.on('object:modified', () => this._mlSnap());
+
+        // Double-click to re-edit placed text
+        this._mlFabric.on('mouse:dblclick', (opt) => {
+            const obj = opt.target;
+            if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+                obj.enterEditing();
+                obj.selectAll();
+                this._mlFabric.renderAll();
+            }
+        });
+
+        // Delete selected object with Delete/Backspace (not while editing text)
+        document.getElementById('mlOverlay')?.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && this._mlFabric) {
+                const obj = this._mlFabric.getActiveObject();
+                if (obj && !obj.isEditing) {
+                    this._mlFabric.remove(obj);
+                    this._mlFabric.renderAll();
+                    this._mlSnap();
+                }
+            }
+        });
+    }
+
+    async _mlSelectSlide(slideIdx) {
+        document.querySelectorAll('.ml-thumb').forEach(t => t.classList.remove('active'));
+        document.getElementById(`ml-thumb-${slideIdx}`)?.classList.add('active');
+        this._mlActiveSlide = slideIdx;
+
+        const placeholder = document.getElementById('mlPlaceholder');
+        if (placeholder) placeholder.style.display = 'none';
+
+        // Wait for Fabric canvas to be ready
+        let tries = 0;
+        while (!this._mlFabric && tries++ < 20) await new Promise(r => setTimeout(r, 100));
+        if (!this._mlFabric) return;
+
+        // Fetch image as base64 data URL
+        let dataUrl;
+        try {
+            const resp = await fetch(`/api/job/${this._mlJobId}/ernie-image/${slideIdx}?t=${Date.now()}`);
+            if (!resp.ok) throw new Error('Image not found');
+            const blob = await resp.blob();
+            dataUrl = await new Promise((res, rej) => {
+                const reader = new FileReader();
+                reader.onload  = () => res(reader.result);
+                reader.onerror = rej;
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error('[MagicLayout] Could not fetch image:', e);
+            return;
+        }
+
+        // Load into Fabric.js as background image
+        const canvas = this._mlFabric;
+        canvas.getObjects().forEach(o => canvas.remove(o));
+        this._mlHistory = [];
+
+        fabric.Image.fromURL(dataUrl, (img) => {
+            const scaleX = canvas.width  / img.width;
+            const scaleY = canvas.height / img.height;
+            const scale  = Math.min(scaleX, scaleY);
+            canvas.setBackgroundImage(img, () => {
+                canvas.renderAll();
+                this._mlSnap();
+            }, {
+                scaleX: scale, scaleY: scale,
+                left: Math.max(0, (canvas.width  - img.width  * scale) / 2),
+                top:  Math.max(0, (canvas.height - img.height * scale) / 2),
+            });
+        });
+
+        document.getElementById('mlBtnSave').disabled = false;
+    }
+
+    _mlTool(name) {
+        const canvas = this._mlFabric;
+        if (!canvas) return;
+
+        // Clean up any previous rect handlers
+        if (this._mlRectCleanup) { this._mlRectCleanup(); this._mlRectCleanup = null; }
+
+        document.querySelectorAll('.ml-tool-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`ml-t-${name}`)?.classList.add('active');
+
+        canvas.isDrawingMode = (name === 'draw');
+        canvas.selection     = (name === 'select');
+
+        if (name === 'rect') {
+            canvas.isDrawingMode = false;
+            canvas.selection     = false;
+            let rect, startX, startY, isDown = false;
+
+            const onDown = (opt) => {
+                isDown = true;
+                const p = canvas.getPointer(opt.e);
+                startX = p.x; startY = p.y;
+                rect = new fabric.Rect({
+                    left: startX, top: startY, width: 0, height: 0,
+                    fill: document.getElementById('mlColor')?.value || '#ffffff',
+                    selectable: true, strokeWidth: 0,
+                });
+                canvas.add(rect);
+            };
+            const onMove = (opt) => {
+                if (!isDown || !rect) return;
+                const p = canvas.getPointer(opt.e);
+                rect.set({
+                    left: Math.min(p.x, startX), top: Math.min(p.y, startY),
+                    width: Math.abs(p.x - startX), height: Math.abs(p.y - startY),
+                });
+                canvas.renderAll();
+            };
+            const onUp = () => {
+                if (!isDown) return;
+                isDown = false; rect = null;
+                this._mlSnap();
+                this._mlTool('select');
+            };
+
+            canvas.on('mouse:down', onDown);
+            canvas.on('mouse:move', onMove);
+            canvas.on('mouse:up',   onUp);
+            this._mlRectCleanup = () => {
+                canvas.off('mouse:down', onDown);
+                canvas.off('mouse:move', onMove);
+                canvas.off('mouse:up',   onUp);
+            };
+        }
+
+        if (name === 'text') {
+            canvas.isDrawingMode = false;
+            canvas.selection     = false;
+            canvas.once('mouse:down', (opt) => {
+                const p    = canvas.getPointer(opt.e);
+                const text = new fabric.IText('Type here', {
+                    left: p.x, top: p.y,
+                    fontSize: 22, fontWeight: 'bold',
+                    fill: document.getElementById('mlColor')?.value || '#ff0000',
+                });
+                canvas.add(text);
+                canvas.setActiveObject(text);
+                canvas.renderAll();
+                setTimeout(() => {
+                    text.enterEditing();
+                    text.selectAll();
+                    canvas.renderAll();
+                }, 50);
+                this._mlTool('select');
+            });
+        }
+    }
+
+    _mlColorChange(val) {
+        if (!this._mlFabric) return;
+        this._mlFabric.freeDrawingBrush.color = val;
+        const obj = this._mlFabric.getActiveObject();
+        if (obj) {
+            obj.set(obj.type === 'i-text' || obj.type === 'text' ? 'fill' : 'stroke', val);
+            this._mlFabric.renderAll();
+        }
+    }
+
+    _mlBrushSize(val) {
+        if (this._mlFabric) this._mlFabric.freeDrawingBrush.width = parseInt(val);
+    }
+
+    _mlSnap() {
+        if (!this._mlFabric) return;
+        this._mlHistory.push(JSON.stringify(this._mlFabric.toJSON(['backgroundImage'])));
+    }
+
+    _mlUndo() {
+        if (!this._mlFabric || this._mlHistory.length < 2) return;
+        this._mlHistory.pop();
+        this._mlFabric.loadFromJSON(
+            JSON.parse(this._mlHistory[this._mlHistory.length - 1]),
+            () => this._mlFabric.renderAll()
+        );
+    }
+
+    _mlClearDrawing() {
+        if (!this._mlFabric) return;
+        this._mlFabric.getObjects().forEach(o => this._mlFabric.remove(o));
+        this._mlFabric.renderAll();
+        this._mlSnap();
+    }
+
+    async _mlSave() {
+        if (!this._mlFabric || this._mlActiveSlide === null) return;
+
+        const btn    = document.getElementById('mlBtnSave');
+        const status = document.getElementById('mlSaveStatus');
+        btn.disabled = true;
+        btn.textContent = '⏳ Saving...';
+        status.className = 'ml-save-status';
+        status.style.display = 'none';
+
+        try {
+            const dataUrl = this._mlFabric.toDataURL({ format: 'png', multiplier: 1 });
+            const resp = await fetch(`/api/job/${this._mlJobId}/ernie-image/${this._mlActiveSlide}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_data: dataUrl }),
+            });
+            if (!resp.ok) throw new Error((await resp.json()).error || 'Save failed');
+
+            // Refresh thumbnail
+            const thumb = document.querySelector(`#ml-thumb-${this._mlActiveSlide} img`);
+            if (thumb) thumb.src = `/api/job/${this._mlJobId}/ernie-image/${this._mlActiveSlide}?t=${Date.now()}`;
+
+            // Show saved badge
+            let badge = document.querySelector(`#ml-thumb-${this._mlActiveSlide} .ml-thumb-saved`);
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'ml-thumb-saved';
+                badge.textContent = '✓ Saved';
+                document.getElementById(`ml-thumb-${this._mlActiveSlide}`)?.appendChild(badge);
+            }
+
+            this._mlSaved.add(this._mlActiveSlide);
+            status.textContent = '✓ Image saved!';
+            status.className = 'ml-save-status ok';
+
+        } catch (err) {
+            status.textContent = '✗ ' + err.message;
+            status.className = 'ml-save-status error';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Save Changes';
+        }
     }
 }
 

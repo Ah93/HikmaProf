@@ -43,6 +43,7 @@ output/
 outputs/
 *.pptx
 *.mp4
+!static/avatar/**/*.mp4
 *.pdf
 *.docx
 *.tex
