@@ -655,6 +655,27 @@
                             <input type="hidden" name="avatar_position" value="bottom-right">
                         </div>
 
+                        <!-- Voice Cloning Card — only shown when No Avatar is selected -->
+                        <div class="form-card" id="avVoiceCloneCard" style="display:block;">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎙️ Clone Your Voice <span style="font-size:11px;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;">NEW</span></h3>
+                                <p class="form-card-description">Upload a 6–30 sec recording to narrate the video in your own voice. Optional — leave empty to use the default AI voice.</p>
+                            </div>
+                            <div class="file-upload-area" id="avVoiceDropZone"
+                                 onclick="document.getElementById('avVoiceInput').click()"
+                                 style="cursor:pointer;">
+                                <div class="file-upload-icon" id="avVoiceIcon">🎙️</div>
+                                <div class="file-upload-text" id="avVoiceText">
+                                    Drop WAV or MP3 here, or click to browse<br>
+                                    <span style="font-size:11px;color:#94a3b8;">6–30 seconds · quiet room · no background noise</span>
+                                </div>
+                                <input type="file" id="avVoiceInput" accept=".wav,.mp3,.ogg,.flac"
+                                       style="display:none;" onchange="avOnVoiceSelect(this)">
+                            </div>
+                            <div id="avVoiceStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                            <input type="hidden" id="avVoiceId" name="voice_id" value="">
+                        </div>
+
                         <button type="submit" class="btn-primary" id="avGenerateBtn">
                             🎬 Generate Avatar Video
                         </button>
@@ -908,7 +929,13 @@
             const gallery = el.closest('.hikma-avatar-gallery');
             gallery.querySelectorAll('.hikma-avatar-option').forEach(o => o.classList.remove('selected'));
             el.classList.add('selected');
-            document.getElementById(hiddenInputId).value = el.getAttribute('data-avatar');
+            const avatarVal = el.getAttribute('data-avatar');
+            document.getElementById(hiddenInputId).value = avatarVal;
+            // Show voice clone card only in Avatar Video tab when No Avatar is chosen
+            if (hiddenInputId === 'avAvatarChoice') {
+                const card = document.getElementById('avVoiceCloneCard');
+                if (card) card.style.display = avatarVal === '' ? 'block' : 'none';
+            }
         }
     </script>
 </body>

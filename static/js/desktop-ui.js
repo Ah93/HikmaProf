@@ -3445,6 +3445,49 @@ function setupAvatarVideoTab() {
     });
 }
 
+async function avOnVoiceSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('avVoiceStatus');
+    const iconEl   = document.getElementById('avVoiceIcon');
+    const textEl   = document.getElementById('avVoiceText');
+    const voiceIdEl = document.getElementById('avVoiceId');
+
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#1e293b';
+    statusEl.style.color = '#94a3b8';
+    statusEl.textContent = '⏳ Uploading voice sample...';
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+        const resp = await fetch(`${APP_PREFIX}/api/clone-voice`, { method: 'POST', body: fd });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            statusEl.style.background = '#450a0a';
+            statusEl.style.color = '#fca5a5';
+            statusEl.textContent = '❌ ' + (data.error || 'Upload failed');
+            voiceIdEl.value = '';
+            return;
+        }
+
+        voiceIdEl.value = data.voice_id;
+        iconEl.textContent = '✅';
+        textEl.innerHTML = `<strong style="color:#4ade80;">${file.name}</strong> ready — your voice will be cloned`;
+        statusEl.style.background = '#052e16';
+        statusEl.style.color = '#4ade80';
+        statusEl.textContent = '✅ Voice sample uploaded successfully';
+    } catch (err) {
+        statusEl.style.background = '#450a0a';
+        statusEl.style.color = '#fca5a5';
+        statusEl.textContent = '❌ Error: ' + err.message;
+        voiceIdEl.value = '';
+    }
+}
+
 function _avFormatElapsed(ms) {
     const totalSec = Math.floor(ms / 1000);
     const mins = Math.floor(totalSec / 60);

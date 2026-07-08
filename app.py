@@ -1043,7 +1043,6 @@ def run_pipeline_background(job_id, file_path, output_name, skip_validation, tem
         env['GENERATE_IMAGES'] = 'true' if generate_images else 'false'
         env['IMAGE_STYLE'] = image_style
         env['SKIP_BACKGROUNDS'] = 'true' if skip_backgrounds else 'false'
-
         # Start a thread to monitor progress file
         stop_monitoring = threading.Event()
 
@@ -1634,6 +1633,28 @@ def _extract_slides_transcript(file_path, filename):
     return '\n---\n'.join(parts) if parts else '## Slide 1\nWelcome to this presentation.'
 
 
+@app.route('/api/clone-voice', methods=['POST'])
+def clone_voice():
+    """Proxy voice sample upload to XTTS server and return voice_id."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+    try:
+        import requests as _req
+        resp = _req.post(
+            f'{XTTS_SERVER_URL}/clone',
+            files={'file': (f.filename, f.stream, f.mimetype)},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        print(f'[CLONE-VOICE] XTTS server error: {e}')
+        return jsonify({'error': f'XTTS server unavailable: {e}'}), 503
+
+
 @app.route('/api/avatar-video', methods=['POST'])
 def avatar_video_standalone():
     """Standalone avatar video: upload PPTX/PDF + optional script → video."""
@@ -1651,6 +1672,7 @@ def avatar_video_standalone():
     speaker_choice  = request.form.get('speaker_choice', '')
     avatar_position = request.form.get('avatar_position', 'bottom-right')
     language        = request.form.get('language', 'en')
+    voice_id        = request.form.get('voice_id', '').strip()
 
     # Resolve voice here — unambiguous, fully logged, no risk of it changing later
     _av_gender = _AVATAR_GENDER.get(avatar_choice)
@@ -1695,7 +1717,7 @@ def avatar_video_standalone():
             _update_voice_job(job_id, 'starting', 0)
             _generate_voice_video_background(
                 job_id, job_dir, slides_path, transcript_path,
-                output_path, language, avatar_choice, tts_voice
+                output_path, language, avatar_choice, tts_voice, voice_id
             )
         except Exception as e:
             print(f'[AVATAR-VIDEO] Error: {e}')
@@ -2454,6 +2476,8 @@ _EDGE_TTS_VOICES_MALE = {
     'ur': 'ur-PK-AsadNeural',        # Urdu male
 }
 
+XTTS_SERVER_URL = os.environ.get('XTTS_SERVER_URL', 'http://localhost:5001')
+
 # Avatar character → gender mapping
 _AVATAR_GENDER = {
     'Professional Female':  'female',
@@ -2531,10 +2555,11 @@ def _clean_text_for_tts(text):
     return text.strip()
 
 
-def _tts_audio(text, out_path, language='en', avatar_choice='', tts_voice=''):
+def _tts_audio(text, out_path, language='en', avatar_choice='', tts_voice='', voice_id=''):
     """Generate MP3 audio for *text*, picking a voice that matches the avatar gender.
 
     Priority:
+      0. XTTS v2   — cloned voice (only when voice_id is provided)
       1. edge-tts  — Microsoft Azure neural voices (best quality, free, no key)
       2. gTTS      — Google TTS (decent fallback, robotic but reliable)
       3. silence   — 3-second silent MP3 so video still renders
@@ -2543,6 +2568,37 @@ def _tts_audio(text, out_path, language='en', avatar_choice='', tts_voice=''):
     """
     lang = language or 'en'
     clean = _clean_text_for_tts(text) or text
+
+    # ── 0. XTTS cloned voice (when user uploaded a sample) ───────────────────
+    if voice_id:
+        try:
+            import requests as _req
+            import tempfile, shutil
+            resp = _req.post(
+                f'{XTTS_SERVER_URL}/synthesize',
+                json={'voice_id': voice_id, 'text': clean, 'language': lang},
+                timeout=120,
+            )
+            if resp.status_code == 200:
+                tmp_wav = out_path.replace('.mp3', '_xtts.wav')
+                with open(tmp_wav, 'wb') as _wf:
+                    _wf.write(resp.content)
+                # Convert WAV → MP3 via ffmpeg if available, else keep as WAV renamed to mp3
+                import subprocess
+                try:
+                    subprocess.run(
+                        ['ffmpeg', '-y', '-i', tmp_wav, '-q:a', '2', out_path],
+                        check=True, capture_output=True
+                    )
+                    os.remove(tmp_wav)
+                except Exception:
+                    os.rename(tmp_wav, out_path)
+                print(f'[VOICE VIDEO] XTTS cloned voice OK  voice_id={voice_id[:8]}...')
+                return
+            else:
+                print(f'[VOICE VIDEO] XTTS server returned {resp.status_code}, falling back to edge-tts')
+        except Exception as xtts_err:
+            print(f'[VOICE VIDEO] XTTS failed: {xtts_err}, falling back to edge-tts')
 
     if tts_voice:
         edge_voice = tts_voice
@@ -2660,7 +2716,7 @@ def _update_voice_job(job_id, status, progress, error=''):
         voice_video_jobs[job_id] = {'status': status, 'progress': progress, 'error': error}
 
 
-def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en', avatar_choice='', tts_voice=''):
+def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en', avatar_choice='', tts_voice='', voice_id=''):
     """Full pipeline: PPTX → slide images → TTS audio → compose clips → concatenate."""
     try:
         import fitz  # PyMuPDF
@@ -2712,7 +2768,7 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
             _update_voice_job(job_id, 'generating_voice', 25 + int((i / n_slides) * 40))
             print(f'[VOICE VIDEO] TTS slide {i + 1}/{n_slides}…')
             audio_path = os.path.join(work_dir, f'audio_{i + 1:03d}.mp3')
-            _tts_audio(text, audio_path, language=language, avatar_choice=avatar_choice, tts_voice=tts_voice)
+            _tts_audio(text, audio_path, language=language, avatar_choice=avatar_choice, tts_voice=tts_voice, voice_id=voice_id)
             audio_files.append(audio_path)
 
         # ── Step 5: Compose one video clip per slide ──────────────────────────
