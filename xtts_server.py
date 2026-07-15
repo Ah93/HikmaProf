@@ -14,6 +14,7 @@ Endpoints:
 import gc
 import logging
 import os
+import subprocess
 import sys
 import uuid
 
@@ -92,10 +93,31 @@ def clone_voice():
         return jsonify({'error': 'Unsupported format. Use WAV, MP3, OGG, or FLAC'}), 400
 
     voice_id  = str(uuid.uuid4())
-    save_path = os.path.join(VOICE_SAMPLES_DIR, f'{voice_id}{ext}')
-    f.save(save_path)
+    raw_path  = os.path.join(VOICE_SAMPLES_DIR, f'{voice_id}_raw{ext}')
+    final_path = os.path.join(VOICE_SAMPLES_DIR, f'{voice_id}.wav')
+    f.save(raw_path)
 
-    log.info(f'Voice sample saved: {voice_id}{ext}  ({os.path.getsize(save_path)} bytes)')
+    # Preprocess: convert to 22050Hz mono WAV, trim silence, normalize loudness
+    try:
+        subprocess.run([
+            'ffmpeg', '-y', '-i', raw_path,
+            '-af', (
+                'silenceremove=start_periods=1:start_silence=0.1:start_threshold=-50dB,'
+                'areverse,'
+                'silenceremove=start_periods=1:start_silence=0.1:start_threshold=-50dB,'
+                'areverse,'
+                'loudnorm=I=-16:LRA=11:TP=-1.5'
+            ),
+            '-ar', '22050',
+            '-ac', '1',
+            final_path,
+        ], check=True, capture_output=True)
+        os.remove(raw_path)
+        log.info(f'Voice sample preprocessed: {voice_id}.wav  ({os.path.getsize(final_path)} bytes)')
+    except Exception as e:
+        log.warning(f'Preprocessing failed ({e}), using raw file as fallback')
+        os.rename(raw_path, final_path)
+
     return jsonify({'voice_id': voice_id, 'filename': f.filename}), 201
 
 
@@ -109,6 +131,7 @@ def synthesize():
     voice_id = data.get('voice_id', '').strip()
     text     = data.get('text', '').strip()
     language = data.get('language', 'en').strip()
+    speed    = float(data.get('speed', 1.1))
 
     if not voice_id:
         return jsonify({'error': 'voice_id is required'}), 400
@@ -138,6 +161,7 @@ def synthesize():
             speaker_wav=sample_path,
             language=language,
             file_path=out_path,
+            speed=speed,
         )
         log.info(f'Done → {out_path}')
         return send_file(out_path, mimetype='audio/wav', as_attachment=False)

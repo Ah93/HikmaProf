@@ -603,6 +603,53 @@
     box-shadow: 0 2px 5px rgba(99,102,241,0.45);
 }
 
+/* ─── Default Color Card ─── */
+.default-color-card {
+    max-width: 120px;
+}
+
+.default-color-preview {
+    height: 52px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg,
+        #f1f5f9 0%, #e2e8f0 25%,
+        #f8fafc 50%, #e2e8f0 75%, #f1f5f9 100%);
+    border-bottom: 2px dashed #cbd5e1;
+    position: relative;
+}
+
+.default-color-preview::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 6px,
+        rgba(148,163,184,0.15) 6px,
+        rgba(148,163,184,0.15) 7px
+    );
+}
+
+.default-color-icon {
+    font-size: 18px;
+    color: #94a3b8;
+    position: relative;
+    z-index: 1;
+}
+
+.default-color-card .color-name {
+    color: #64748b;
+    font-style: italic;
+}
+
+.default-color-card.selected {
+    border-color: #6366f1;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 1100px) {
     .template-grid {
@@ -1071,4 +1118,229 @@
 
 .generate-ai-images-btn:active {
     transform: translateY(0);
+}
+
+/* ── DARK NEON ───────────────────────────────
+   Near-black bg, neon cyan scan lines + left bar + corner brackets */
+.template-card[data-template-id="dark-neon"] .template-preview {
+    background:
+        linear-gradient(to left,  rgba(0,255,255,0.18) 0px, rgba(0,255,255,0.18) 3px, transparent 3px),
+        linear-gradient(to bottom, rgba(0,255,255,0.22) 0px, rgba(0,255,255,0.22) 4px, transparent 4px,
+            transparent calc(100% - 4px), rgba(0,255,255,0.22) calc(100% - 4px)),
+        linear-gradient(to right, rgba(0,255,255,0.12) 0px, rgba(0,255,255,0.12) 3px, transparent 3px),
+        #080c10;
+}
+.template-card[data-template-id="dark-neon"] .tp-decoration {
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: #00ffff;
+    box-shadow: 0 0 8px #00ffff, 0 0 16px rgba(0,255,255,0.4);
+}
+.template-card[data-template-id="dark-neon"] .tp-slide { padding-left: 18px; }
+.template-card[data-template-id="dark-neon"] .tp-eyebrow {
+    background: rgba(0,255,255,0.5);
+    height: 2px; width: 20px;
+    box-shadow: 0 0 6px #00ffff;
+}
+.template-card[data-template-id="dark-neon"] .tp-title-text {
+    color: #00ffff;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 10px rgba(0,255,255,0.7);
+}
+.template-card[data-template-id="dark-neon"] .tp-line {
+    background: rgba(0,255,255,0.22);
+    box-shadow: 0 0 4px rgba(0,255,255,0.15);
+}
+
+/* ── GLASSMORPHISM ───────────────────────────
+   Deep purple gradient bg + frosted white card overlay */
+.template-card[data-template-id="glassmorphism"] .template-preview {
+    background: radial-gradient(ellipse at 80% 10%, rgba(124,58,237,0.6) 0%, transparent 55%),
+                radial-gradient(ellipse at 10% 90%, rgba(91,33,182,0.5) 0%, transparent 50%),
+                linear-gradient(135deg, #1a0533 0%, #2d1069 60%, #1e0a4c 100%);
+}
+.template-card[data-template-id="glassmorphism"] .tp-decoration {
+    left: 6px; right: 6px; top: 22px; bottom: 4px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(4px);
+}
+.template-card[data-template-id="glassmorphism"] .tp-slide { padding: 28px 10px 6px; }
+.template-card[data-template-id="glassmorphism"] .tp-eyebrow {
+    background: rgba(168,85,247,0.7);
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(168,85,247,0.6);
+}
+.template-card[data-template-id="glassmorphism"] .tp-title-text {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 1px 6px rgba(168,85,247,0.5);
+}
+.template-card[data-template-id="glassmorphism"] .tp-line {
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+}
+
+/* ── PRESTIGE ────────────────────────────────
+   Dark navy bg + gold top/bottom bars + thin gold left accent */
+.template-card[data-template-id="prestige"] .template-preview {
+    background:
+        linear-gradient(to bottom, #D4AF37 0px, #D4AF37 10px, transparent 10px,
+            transparent calc(100% - 10px), #D4AF37 calc(100% - 10px)),
+        linear-gradient(to right, rgba(212,175,55,0.35) 0px, rgba(212,175,55,0.35) 2px, transparent 2px),
+        #0b1628;
+}
+.template-card[data-template-id="prestige"] .tp-decoration {
+    left: 0; top: 10px; bottom: 10px;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(212,175,55,0.6), rgba(212,175,55,0.2));
+    margin-left: 10px;
+}
+.template-card[data-template-id="prestige"] .tp-slide { padding-left: 20px; padding-top: 8px; }
+.template-card[data-template-id="prestige"] .tp-eyebrow {
+    background: rgba(212,175,55,0.6);
+    height: 1px; width: 22px;
+}
+.template-card[data-template-id="prestige"] .tp-title-text {
+    color: #f5e6b8;
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+.template-card[data-template-id="prestige"] .tp-line {
+    background: rgba(212,175,55,0.25);
+}
+
+/* ── SPLIT BOLD ──────────────────────────────
+   Bold left color panel + white right content area */
+.template-card[data-template-id="split-bold"] .template-preview {
+    background:
+        linear-gradient(to right,
+            #4338ca 0px, #4338ca 36px,
+            #5b21b6 36px, #5b21b6 40px,
+            rgba(99,102,241,0.25) 40px, rgba(99,102,241,0.25) 42px,
+            #f8f8fc 42px);
+}
+.template-card[data-template-id="split-bold"] .tp-decoration {
+    left: 0; top: 0; bottom: 0;
+    width: 36px;
+    background: transparent;
+}
+.template-card[data-template-id="split-bold"] .tp-decoration::after {
+    content: '';
+    position: absolute;
+    left: 6px; top: 10px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    box-shadow: 0 8px 0 rgba(255,255,255,0.45), 0 16px 0 rgba(255,255,255,0.35),
+                10px 0 0 rgba(255,255,255,0.45), 10px 8px 0 rgba(255,255,255,0.35),
+                10px 16px 0 rgba(255,255,255,0.25), 20px 0 0 rgba(255,255,255,0.35),
+                20px 8px 0 rgba(255,255,255,0.25);
+}
+.template-card[data-template-id="split-bold"] .tp-slide { padding-left: 52px; }
+.template-card[data-template-id="split-bold"] .tp-eyebrow {
+    background: #4338ca;
+    width: 20px; height: 3px;
+    border-radius: 2px;
+}
+.template-card[data-template-id="split-bold"] .tp-title-text {
+    color: #1e1b4b;
+    font-size: 12px;
+    font-weight: 800;
+    text-shadow: none;
+}
+.template-card[data-template-id="split-bold"] .tp-line {
+    background: rgba(67,56,202,0.2);
+}
+
+/* ── BLUEPRINT ───────────────────────────────
+   Dark navy grid + cyan crosshairs + monospace feel */
+.template-card[data-template-id="blueprint"] .template-preview {
+    background:
+        /* vertical grid lines */
+        repeating-linear-gradient(to right,
+            transparent, transparent 12px,
+            rgba(0,194,255,0.12) 12px, rgba(0,194,255,0.12) 13px),
+        /* horizontal grid lines */
+        repeating-linear-gradient(to bottom,
+            transparent, transparent 10px,
+            rgba(0,194,255,0.12) 10px, rgba(0,194,255,0.12) 11px),
+        /* top edge rule */
+        linear-gradient(to bottom, rgba(0,194,255,0.55) 0px, rgba(0,194,255,0.55) 3px, transparent 3px),
+        #0D1B2A;
+}
+.template-card[data-template-id="blueprint"] .tp-decoration {
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: rgba(0,194,255,0.7);
+}
+.template-card[data-template-id="blueprint"] .tp-decoration::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: 5px;
+    width: 10px; height: 2px;
+    background: rgba(0,194,255,0.6);
+    box-shadow:
+        0 0 0 0 transparent,
+        /* crosshair vertical arm */
+        5px -5px 0 0 rgba(0,194,255,0.6),
+        5px 5px 0 0 rgba(0,194,255,0.6);
+}
+.template-card[data-template-id="blueprint"] .tp-slide { padding-left: 14px; }
+.template-card[data-template-id="blueprint"] .tp-eyebrow {
+    background: rgba(0,194,255,0.55);
+    width: 18px; height: 2px;
+}
+.template-card[data-template-id="blueprint"] .tp-title-text {
+    color: #00c2ff;
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 8px rgba(0,194,255,0.5);
+}
+.template-card[data-template-id="blueprint"] .tp-line {
+    background: rgba(0,194,255,0.2);
+}
+
+/* ── AURORA ──────────────────────────────────
+   Deep dark space bg + layered aurora gradient bands */
+.template-card[data-template-id="aurora"] .template-preview {
+    background:
+        radial-gradient(ellipse at -30% 60%, rgba(13,148,136,0.55) 0%, transparent 55%),
+        radial-gradient(ellipse at 20%  80%, rgba(5,150,105,0.4)   0%, transparent 50%),
+        radial-gradient(ellipse at 70%  10%, rgba(124,58,237,0.45) 0%, transparent 55%),
+        radial-gradient(ellipse at 110% 70%, rgba(219,39,119,0.35) 0%, transparent 50%),
+        linear-gradient(to bottom, rgba(45,212,191,0.5) 0px, rgba(45,212,191,0.5) 3px, transparent 3px),
+        #060A14;
+}
+.template-card[data-template-id="aurora"] .tp-decoration {
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #2dd4bf, #7c3aed, #db2777);
+    opacity: 0.75;
+}
+.template-card[data-template-id="aurora"] .tp-slide { padding-left: 12px; }
+.template-card[data-template-id="aurora"] .tp-eyebrow {
+    background: rgba(45,212,191,0.6);
+    width: 14px; height: 2px;
+    border-radius: 1px;
+}
+.template-card[data-template-id="aurora"] .tp-title-text {
+    color: #e0fffe;
+    font-size: 11px;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(45,212,191,0.6);
+}
+.template-card[data-template-id="aurora"] .tp-line {
+    background: rgba(45,212,191,0.2);
 }

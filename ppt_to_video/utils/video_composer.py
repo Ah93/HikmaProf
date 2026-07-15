@@ -366,7 +366,7 @@ def _draw_panel_overlay(panel_w, panel_h, av_cx, av_cy, av_r):
     return np.array(overlay)
 
 
-def _compose_side_panel(slide_image, audio_path, output_path, avatar_video, side='side-left'):
+def _compose_side_panel(slide_image, audio_path, output_path, avatar_video, side='side-left', presenter_name=''):
     """
     Side-panel layout: a styled vertical strip holds the avatar on the
     left (or right), the slide fills the remaining area.
@@ -414,7 +414,7 @@ def _compose_side_panel(slide_image, audio_path, output_path, avatar_video, side
 
     # ── Presenter name card ──────────────────────────────────────────
     avatar_key   = os.path.splitext(os.path.basename(avatar_video))[0]
-    display_name = _AVATAR_DISPLAY_NAMES.get(avatar_key, avatar_key)
+    display_name = presenter_name if presenter_name else _AVATAR_DISPLAY_NAMES.get(avatar_key, 'Presenter')
 
     from PIL import ImageFont
     name_font_size = max(13, int(av_r * 0.21))
@@ -534,7 +534,7 @@ def _compose_side_panel(slide_image, audio_path, output_path, avatar_video, side
 
 
 def compose_slide_video(slide_image, audio_path, output_path,
-                        avatar_video=None, avatar_position='side-left'):
+                        avatar_video=None, avatar_position='side-left', presenter_name=''):
     """
     Compose a slide video with optional pre-built avatar overlay.
 
@@ -551,7 +551,7 @@ def compose_slide_video(slide_image, audio_path, output_path,
         print("[COMPOSE] routing to _compose_side_panel")
         try:
             return _compose_side_panel(slide_image, audio_path, output_path,
-                                       avatar_video, avatar_position)
+                                       avatar_video, avatar_position, presenter_name=presenter_name)
         except Exception as e:
             import traceback
             print(f"[COMPOSE] Side panel FAILED: {e}")

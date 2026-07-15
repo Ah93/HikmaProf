@@ -4,7 +4,7 @@ class TemplateGallery {
         this.templates = [];
         this.colors = [];
         this.selectedTemplate = 'modern';
-        this.selectedColor = 'blue';
+        this.selectedColor = 'default';
         this.selectedNumImages = 3;
         this.selectedAiColor = 'indigo';
         this.selectedAiStyle = 'dark-tech';
@@ -84,7 +84,7 @@ class TemplateGallery {
         const container = document.getElementById('templateGallery');
         if (!container) return;
 
-        const FEATURED_IDS = ['modern', 'minimal', 'tech', 'creative', 'corporate', 'elegant', 'startup', 'magazine', 'academic', 'nature', 'retro', 'luxury'];
+        const FEATURED_IDS = ['modern', 'minimal', 'tech', 'creative', 'corporate', 'elegant', 'startup', 'magazine', 'academic', 'nature', 'retro', 'luxury', 'dark-neon', 'glassmorphism', 'prestige', 'split-bold', 'blueprint', 'aurora'];
         const featured = FEATURED_IDS
             .map(id => this.templates.find(t => t.id === id))
             .filter(Boolean);
@@ -128,8 +128,21 @@ class TemplateGallery {
 
         const lightColors = this.colors.filter(c => c.category === 'light');
         const darkColors  = this.colors.filter(c => c.category === 'dark');
+        const isDefaultSelected = this.selectedColor === 'default';
 
         let html = `
+            <div class="color-category">
+                <h4 class="color-category-title">No Override</h4>
+                <div class="color-grid">
+                    <div class="color-card default-color-card ${isDefaultSelected ? 'selected' : ''}" data-color-id="default">
+                        <div class="color-preview default-color-preview">
+                            <span class="default-color-icon">✦</span>
+                        </div>
+                        <div class="color-name">Default</div>
+                        ${isDefaultSelected ? '<div class="color-selected-badge">✓</div>' : ''}
+                    </div>
+                </div>
+            </div>
             <div class="color-category">
                 <h4 class="color-category-title">Light Themes</h4>
                 <div class="color-grid">
@@ -260,7 +273,9 @@ class TemplateGallery {
             const template = this.templates.find(t => t.id === this.selectedTemplate);
             const color    = this.colors.find(c => c.id === this.selectedColor);
             if (templateNameEl) templateNameEl.textContent = template ? template.name : this.selectedTemplate;
-            if (colorNameEl)    colorNameEl.textContent    = color    ? color.name    : this.selectedColor;
+            if (colorNameEl)    colorNameEl.textContent    = this.selectedColor === 'default'
+                ? 'Default (Template Colors)'
+                : (color ? color.name : this.selectedColor);
             if (typeBadge)      typeBadge.style.display = 'none';
         }
     }

@@ -49,6 +49,28 @@ export class EnhancedPPTXGenerator {
     this.templateStyle = getTemplateStyle(config?.templateStyle || 'modern');
     this.colorScheme = getColorScheme(config?.colorScheme || 'blue');
 
+    // Templates that always render a dark background regardless of color scheme —
+    // override text/background in the scheme so every colorScheme.text reference
+    // throughout the generator automatically produces readable light text.
+    const FORCED_DARK_BG: Record<string, string> = {
+      'dark-neon':      '080C10',
+      'glassmorphism':  '1A0533',
+      'prestige':       '0B1628',
+      'tech':           '0d1117',
+      'elegant':        '12111a',
+      'creative':       '1a1a2e',
+      'blueprint':      '0D1B2A',
+      'aurora':         '060A14',
+    };
+    const forcedBg = FORCED_DARK_BG[this.templateStyle.id];
+    if (forcedBg) {
+      this.colorScheme = {
+        ...this.colorScheme,
+        text:       'E5E7EB',  // soft white — readable on all these dark bgs
+        background: forcedBg,  // lets pickTextColorForFill() see the real bg
+      };
+    }
+
     // Load PptxGenJS constructor
     this.PptxGenJS = require('pptxgenjs');
 
@@ -172,7 +194,10 @@ export class EnhancedPPTXGenerator {
   }
 
   private getTitleColor(): string {
-    // If background is dark, use light text; otherwise use primary.
+    // Templates that force a dark background regardless of color scheme
+    if (['dark-neon', 'glassmorphism', 'prestige'].includes(this.templateStyle.id)) {
+      return this.sanitizeColor(this.colorScheme.lightText || 'FFFFFF');
+    }
     return this.isDarkHex(this.colorScheme.background)
       ? this.colorScheme.text
       : this.colorScheme.primary;
@@ -857,6 +882,94 @@ export class EnhancedPPTXGenerator {
         });
         break;
 
+      case 'dark-neon':
+        // Dark Neon: Override bg to near-black + cyan scan lines + corner brackets + neon bars
+        slide.background = { fill: '080C10' };
+        [1.1, 2.2, 3.3, 4.4].forEach(y => {
+          slide.addShape('rect', { x: 0, y, w: 10, h: 0.007, fill: { color: '00FFFF', transparency: 88 }, line: { type: 'none' } });
+        });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.06, h: 5.625, fill: { color: '00FFFF', transparency: 15 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: '00FFFF', transparency: 15 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: '00FFFF', transparency: 35 }, line: { type: 'none' } });
+        // Top-left bracket
+        slide.addShape('rect', { x: 0.2, y: 0.18, w: 0.3, h: 0.04, fill: { color: '00FFFF', transparency: 25 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.2, y: 0.18, w: 0.04, h: 0.3, fill: { color: '00FFFF', transparency: 25 }, line: { type: 'none' } });
+        // Bottom-right bracket
+        slide.addShape('rect', { x: 9.5, y: 5.405, w: 0.3, h: 0.04, fill: { color: '00FFFF', transparency: 25 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 9.76, y: 5.11, w: 0.04, h: 0.3, fill: { color: '00FFFF', transparency: 25 }, line: { type: 'none' } });
+        break;
+
+      case 'glassmorphism':
+        // Glassmorphism: Deep purple bg + glow blobs + frosted glass content card
+        slide.background = { fill: '1A0533' };
+        slide.addShape('rect', { x: 4, y: 0, w: 6, h: 5.625, fill: { color: '4C1D95', transparency: 68 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 5.5, y: -2, w: 6, h: 6, fill: { color: '7C3AED', transparency: 70 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: -2, y: 2.5, w: 5, h: 5, fill: { color: '5B21B6', transparency: 76 }, line: { type: 'none' } });
+        slide.addShape('roundRect', {
+          x: 0.35, y: 0.8, w: 9.3, h: 4.55,
+          fill: { color: 'FFFFFF', transparency: 91 },
+          line: { color: 'FFFFFF', width: 0.75, transparency: 65 }
+        });
+        break;
+
+      case 'prestige':
+        // Prestige: Deep navy bg + gold top/bottom bars + left thin accent
+        slide.background = { fill: '0B1628' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.22, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0.22, w: 10, h: 0.018, fill: { color: 'D4AF37', transparency: 55 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.405, w: 10, h: 0.22, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.55, y: 0.22, w: 0.03, h: 5.185, fill: { color: 'D4AF37', transparency: 48 }, line: { type: 'none' } });
+        ([[0.24, 0.38], [9.62, 0.38]] as [number, number][]).forEach(([x, y]) => {
+          slide.addShape('rect', { x, y, w: 0.13, h: 0.13, fill: { color: 'D4AF37', transparency: 22 }, line: { type: 'none' } });
+        });
+        break;
+
+      case 'split-bold':
+        // Split Bold: Left colored panel + dot grid + right white area
+        slide.addShape('rect', { x: 0, y: 0, w: 3.5, h: 5.625, fill: { color: this.colorScheme.primary }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.3, y: 0, w: 0.45, h: 5.625, fill: { color: this.colorScheme.secondary || this.colorScheme.primary, transparency: 15 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.75, y: 0, w: 0.04, h: 5.625, fill: { color: this.colorScheme.accent, transparency: 28 }, line: { type: 'none' } });
+        // Dot grid on left panel
+        [0.7, 1.6, 2.5, 3.4, 4.3].forEach(y => {
+          [0.35, 0.95, 1.55, 2.15, 2.75].forEach(x => {
+            slide.addShape('ellipse', { x, y, w: 0.05, h: 0.05, fill: { color: 'FFFFFF', transparency: 72 }, line: { type: 'none' } });
+          });
+        });
+        slide.addShape('rect', { x: 3.75, y: 0, w: 6.25, h: 0.055, fill: { color: this.colorScheme.accent, transparency: 32 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.75, y: 5.57, w: 6.25, h: 0.055, fill: { color: this.colorScheme.accent, transparency: 32 }, line: { type: 'none' } });
+        break;
+
+      case 'blueprint':
+        // Blueprint: Dark navy + cyan grid lines + crosshair corner markers
+        slide.background = { fill: '0D1B2A' };
+        [0.75, 1.5, 2.25, 3.0, 3.75, 4.5].forEach(y => {
+          slide.addShape('rect', { x: 0, y, w: 10, h: 0.012, fill: { color: '00C2FF', transparency: 88 }, line: { type: 'none' } });
+        });
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].forEach(x => {
+          slide.addShape('rect', { x, y: 0, w: 0.012, h: 5.625, fill: { color: '00C2FF', transparency: 88 }, line: { type: 'none' } });
+        });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.05, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.575, w: 10, h: 0.05, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.05, h: 5.625, fill: { color: '00C2FF', transparency: 18 }, line: { type: 'none' } });
+        // Top-left crosshair
+        slide.addShape('rect', { x: 0.18, y: 0.08, w: 0.26, h: 0.04, fill: { color: '00C2FF', transparency: 28 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.28, y: 0.05, w: 0.04, h: 0.2, fill: { color: '00C2FF', transparency: 28 }, line: { type: 'none' } });
+        // Bottom-right crosshair
+        slide.addShape('rect', { x: 9.56, y: 5.51, w: 0.26, h: 0.04, fill: { color: '00C2FF', transparency: 28 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 9.68, y: 5.37, w: 0.04, h: 0.2, fill: { color: '00C2FF', transparency: 28 }, line: { type: 'none' } });
+        break;
+
+      case 'aurora':
+        // Aurora: Deep dark space bg + layered diagonal aurora ellipse bands
+        slide.background = { fill: '060A14' };
+        slide.addShape('ellipse', { x: -4, y: 0.5, w: 10, h: 4.5, fill: { color: '0D9488', transparency: 70 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: -2, y: 2.0, w: 8, h: 3.5, fill: { color: '059669', transparency: 78 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 1.5, y: -1.0, w: 10, h: 4.5, fill: { color: '7C3AED', transparency: 80 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 4.5, y: 1.5, w: 8, h: 4.0, fill: { color: 'DB2777', transparency: 84 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.04, fill: { color: '2DD4BF', transparency: 32 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.585, w: 10, h: 0.04, fill: { color: '2DD4BF', transparency: 52 }, line: { type: 'none' } });
+        break;
+
       case 'magazine':
         // Magazine: Top/bottom bars + left/right bars + inner sub-rule + editorial column
         slide.addShape('rect', {
@@ -1087,7 +1200,72 @@ export class EnhancedPPTXGenerator {
           slide.addShape('rect', { x, y, w: 0.12, h: 0.12, fill: { color: '#D4AF37', transparency: 20 }, line: { type: 'none' } });
         });
         break;
-        
+
+      case 'dark-neon':
+        // Neon box frame around header + left accent bar
+        slide.addShape('rect', {
+          x: this.MARGIN_X - 0.1, y: this.HEADER_Y - 0.08, w: 9.3, h: this.HEADER_H + 0.16,
+          fill: { color: '00FFFF', transparency: 95 },
+          line: { color: '00FFFF', width: 1.5, transparency: 28 }
+        });
+        slide.addShape('rect', {
+          x: this.MARGIN_X - 0.1, y: this.HEADER_Y - 0.08, w: 0.09, h: this.HEADER_H + 0.16,
+          fill: { color: '00FFFF', transparency: 38 },
+          line: { type: 'none' }
+        });
+        break;
+
+      case 'glassmorphism':
+        // Frosted underline + purple accent dot
+        slide.addShape('rect', {
+          x: this.MARGIN_X, y: this.HEADER_Y + this.HEADER_H - 0.03, w: 8.8, h: 0.03,
+          fill: { color: 'FFFFFF', transparency: 48 },
+          line: { type: 'none' }
+        });
+        slide.addShape('ellipse', {
+          x: this.MARGIN_X - 0.08, y: this.HEADER_Y + this.HEADER_H / 2 - 0.08, w: 0.16, h: 0.16,
+          fill: { color: 'A855F7', transparency: 18 },
+          line: { type: 'none' }
+        });
+        break;
+
+      case 'prestige':
+        // Gold underline + small flanking gold squares
+        slide.addShape('rect', {
+          x: this.MARGIN_X, y: this.HEADER_Y + this.HEADER_H - 0.025, w: 8.8, h: 0.025,
+          fill: { color: 'D4AF37', transparency: 18 },
+          line: { type: 'none' }
+        });
+        slide.addShape('rect', {
+          x: this.MARGIN_X, y: this.HEADER_Y + this.HEADER_H - 0.1, w: 0.08, h: 0.08,
+          fill: { color: 'D4AF37', transparency: 14 },
+          line: { type: 'none' }
+        });
+        break;
+
+      case 'split-bold':
+        // Accent underline on right content side only
+        slide.addShape('rect', {
+          x: 3.9, y: this.HEADER_Y + this.HEADER_H - 0.025, w: 5.6, h: 0.025,
+          fill: { color: this.colorScheme.primary },
+          line: { type: 'none' }
+        });
+        break;
+
+      case 'blueprint':
+        // Technical bracket markers flanking the header + full-width underline
+        slide.addShape('rect', { x: this.MARGIN_X - 0.1, y: this.HEADER_Y + 0.08, w: 0.04, h: this.HEADER_H - 0.1, fill: { color: '00C2FF', transparency: 22 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: this.MARGIN_X - 0.1, y: this.HEADER_Y + 0.08, w: 0.2, h: 0.04, fill: { color: '00C2FF', transparency: 22 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: this.MARGIN_X, y: this.HEADER_Y + this.HEADER_H - 0.02, w: 8.8, h: 0.02, fill: { color: '00C2FF', transparency: 30 }, line: { type: 'none' } });
+        break;
+
+      case 'aurora':
+        // Soft teal-to-transparent gradient underline
+        slide.addShape('rect', { x: this.MARGIN_X, y: this.HEADER_Y + this.HEADER_H - 0.03, w: 4.5, h: 0.03, fill: { color: '2DD4BF', transparency: 28 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: this.MARGIN_X + 4.5, y: this.HEADER_Y + this.HEADER_H - 0.03, w: 4.3, h: 0.03, fill: { color: 'A855F7', transparency: 55 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: this.MARGIN_X - 0.09, y: this.HEADER_Y + this.HEADER_H / 2 - 0.07, w: 0.14, h: 0.14, fill: { color: '2DD4BF', transparency: 20 }, line: { type: 'none' } });
+        break;
+
       default:
         // Default: Accent pill + line combo
         if (this.templateStyle.useShapes) {
@@ -1427,6 +1605,150 @@ export class EnhancedPPTXGenerator {
           fill: { color: this.colorScheme.accent, transparency: 30 },
           line: { type: 'none' }
         });
+        break;
+
+      case 'dark-neon':
+        slide.background = { fill: '080C10' };
+        // Neon cyan border frame
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: '00FFFF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.555, w: 10, h: 0.07, fill: { color: '00FFFF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.06, h: 5.625, fill: { color: '00FFFF', transparency: 15 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 9.94, y: 0, w: 0.06, h: 5.625, fill: { color: '00FFFF', transparency: 15 }, line: { type: 'none' } });
+        // Neon left accent bar
+        slide.addShape('rect', { x: 0, y: 0, w: 0.08, h: 5.625, fill: { color: '00FFFF' }, line: { type: 'none' } });
+        // Metadata separator
+        slide.addShape('rect', { x: 0.25, y: 4.0, w: 9.5, h: 0.02, fill: { color: '00FFFF', transparency: 35 }, line: { type: 'none' } });
+        break;
+
+      case 'glassmorphism':
+        slide.background = { fill: '1A0533' };
+        // Purple glow blobs
+        slide.addShape('ellipse', { x: 5.5, y: -1.0, w: 5.0, h: 3.5, fill: { color: '7C3AED', transparency: 72 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: -1.0, y: 3.0, w: 4.0, h: 3.0, fill: { color: '5B21B6', transparency: 75 }, line: { type: 'none' } });
+        // Frosted glass card
+        slide.addShape('roundRect', { x: 0.5, y: 0.35, w: 9.0, h: 4.9, rectRadius: 0.18, fill: { color: 'FFFFFF', transparency: 90 }, line: { color: 'FFFFFF', width: 1, transparency: 65 } });
+        // Metadata separator
+        slide.addShape('rect', { x: 0.75, y: 4.0, w: 8.5, h: 0.02, fill: { color: 'A855F7', transparency: 45 }, line: { type: 'none' } });
+        break;
+
+      case 'prestige':
+        slide.background = { fill: '0B1628' };
+        // Gold top bar
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.18, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        // Gold bottom bar
+        slide.addShape('rect', { x: 0, y: 5.445, w: 10, h: 0.18, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        // Thin gold left accent
+        slide.addShape('rect', { x: 0, y: 0.18, w: 0.04, h: 5.265, fill: { color: 'D4AF37', transparency: 40 }, line: { type: 'none' } });
+        // Metadata separator
+        slide.addShape('rect', { x: 0.5, y: 4.0, w: 9.0, h: 0.02, fill: { color: 'D4AF37', transparency: 35 }, line: { type: 'none' } });
+        break;
+
+      case 'split-bold':
+        // Left bold color panel
+        slide.addShape('rect', { x: 0, y: 0, w: 3.6, h: 5.625, fill: { color: '4338CA' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.6, y: 0, w: 0.12, h: 5.625, fill: { color: '5B21B6' }, line: { type: 'none' } });
+        slide.background = { fill: 'F8F8FC' };
+        // Accent strip on right
+        slide.addShape('rect', { x: 9.8, y: 0, w: 0.2, h: 5.625, fill: { color: '4338CA', transparency: 55 }, line: { type: 'none' } });
+        // Metadata separator
+        slide.addShape('rect', { x: 3.85, y: 4.0, w: 5.9, h: 0.03, fill: { color: '4338CA', transparency: 30 }, line: { type: 'none' } });
+        break;
+
+      case 'blueprint':
+        slide.background = { fill: '0D1B2A' };
+        // Full grid
+        [0.75, 1.5, 2.25, 3.0, 3.75, 4.5].forEach(y => {
+          slide.addShape('rect', { x: 0, y, w: 10, h: 0.012, fill: { color: '00C2FF', transparency: 88 }, line: { type: 'none' } });
+        });
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].forEach(x => {
+          slide.addShape('rect', { x, y: 0, w: 0.012, h: 5.625, fill: { color: '00C2FF', transparency: 88 }, line: { type: 'none' } });
+        });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.05, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.575, w: 10, h: 0.05, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.05, h: 5.625, fill: { color: '00C2FF', transparency: 18 }, line: { type: 'none' } });
+        // Prominent corner crosshairs on title slide
+        [[0.18, 0.12], [9.56, 0.12]].forEach(([x, y]) => {
+          slide.addShape('rect', { x, y, w: 0.3, h: 0.04, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+          slide.addShape('rect', { x: x + 0.13, y: y - 0.1, w: 0.04, h: 0.26, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        });
+        [[0.18, 5.48], [9.56, 5.48]].forEach(([x, y]) => {
+          slide.addShape('rect', { x, y, w: 0.3, h: 0.04, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+          slide.addShape('rect', { x: x + 0.13, y, w: 0.04, h: 0.22, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        });
+        // Metadata separator
+        slide.addShape('rect', { x: 0.25, y: 4.0, w: 9.5, h: 0.02, fill: { color: '00C2FF', transparency: 35 }, line: { type: 'none' } });
+        break;
+
+      case 'aurora':
+        slide.background = { fill: '060A14' };
+        slide.addShape('ellipse', { x: -4, y: 0.5, w: 10, h: 4.5, fill: { color: '0D9488', transparency: 70 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: -2, y: 2.0, w: 8, h: 3.5, fill: { color: '059669', transparency: 78 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 1.5, y: -1.0, w: 10, h: 4.5, fill: { color: '7C3AED', transparency: 80 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 4.5, y: 1.5, w: 8, h: 4.0, fill: { color: 'DB2777', transparency: 84 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.04, fill: { color: '2DD4BF', transparency: 32 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.585, w: 10, h: 0.04, fill: { color: '2DD4BF', transparency: 52 }, line: { type: 'none' } });
+        // Metadata separator
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.02, fill: { color: '2DD4BF', transparency: 42 }, line: { type: 'none' } });
+        break;
+
+      case 'minimal':
+        slide.background = { fill: '1E293B' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.04, fill: { color: '94A3B8', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.585, w: 10, h: 0.04, fill: { color: '94A3B8', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.02, fill: { color: '64748B', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'luxury':
+        slide.background = { fill: '1C1408' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.18, y: 0.18, w: 9.64, h: 0.015, fill: { color: 'D4AF37', transparency: 50 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.18, y: 5.435, w: 9.64, h: 0.015, fill: { color: 'D4AF37', transparency: 50 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.015, fill: { color: 'D4AF37', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'academic':
+        slide.background = { fill: '1B3A5C' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.08, fill: { color: '2563EB' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.545, w: 10, h: 0.08, fill: { color: '2563EB' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.55, y: 0, w: 0.03, h: 5.625, fill: { color: 'FF6B6B' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.02, fill: { color: '93C5FD', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'nature':
+        slide.background = { fill: '0D3B1F' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: '16A34A' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: '16A34A' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.08, h: 5.625, fill: { color: '22C55E', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.02, fill: { color: '4ADE80', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'retro':
+        slide.background = { fill: '2D1F0A' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.1, fill: { color: 'FF6B35' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.525, w: 10, h: 0.1, fill: { color: 'FF6B35' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0.1, w: 10, h: 0.02, fill: { color: 'FFA500', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.505, w: 10, h: 0.02, fill: { color: 'FFA500', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.02, fill: { color: 'FF6B35', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'magazine':
+        slide.background = { fill: '111111' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.12, fill: { color: 'E11D48' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.505, w: 10, h: 0.12, fill: { color: 'E11D48' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.08, h: 5.625, fill: { color: 'E11D48' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 9.92, y: 0, w: 0.08, h: 5.625, fill: { color: 'E11D48', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.08, y: 0.22, w: 9.84, h: 0.025, fill: { color: 'E11D48', transparency: 55 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.5, y: 0.12, w: 0.03, h: 5.385, fill: { color: 'E11D48', transparency: 75 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.02, fill: { color: 'E11D48', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'startup':
+        slide.background = { fill: '0F172A' };
+        slide.addShape('rect', { x: 0, y: 0, w: 0.12, h: 5.625, fill: { color: 'EA580C' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.25, w: 10, h: 0.375, fill: { color: 'EA580C', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.44, w: 10, h: 0.185, fill: { color: 'FF6B35', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 4.0, w: 8.7, h: 0.03, fill: { color: 'EA580C', transparency: 40 }, line: { type: 'none' } });
         break;
 
       default:
@@ -2258,6 +2580,125 @@ export class EnhancedPPTXGenerator {
         slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: this.colorScheme.accent, transparency: 25 }, line: { type: 'none' } });
         slide.addShape('rect', { x: 0, y: 5.555, w: 10, h: 0.07, fill: { color: this.colorScheme.accent, transparency: 30 }, line: { type: 'none' } });
         slide.addShape('rect', { x: 0.7, y: 3.1, w: 8.6, h: 0.035, fill: { color: this.colorScheme.accent, transparency: 28 }, line: { type: 'none' } });
+        break;
+
+      case 'dark-neon':
+        slide.background = { fill: '080C10' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: '00FFFF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.555, w: 10, h: 0.07, fill: { color: '00FFFF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.06, h: 5.625, fill: { color: '00FFFF', transparency: 15 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 9.94, y: 0, w: 0.06, h: 5.625, fill: { color: '00FFFF', transparency: 15 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.08, h: 5.625, fill: { color: '00FFFF' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.25, y: 3.1, w: 9.5, h: 0.02, fill: { color: '00FFFF', transparency: 35 }, line: { type: 'none' } });
+        break;
+
+      case 'glassmorphism':
+        slide.background = { fill: '1A0533' };
+        slide.addShape('ellipse', { x: 5.5, y: -1.0, w: 5.0, h: 3.5, fill: { color: '7C3AED', transparency: 72 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: -1.0, y: 3.0, w: 4.0, h: 3.0, fill: { color: '5B21B6', transparency: 75 }, line: { type: 'none' } });
+        slide.addShape('roundRect', { x: 0.5, y: 0.35, w: 9.0, h: 4.9, rectRadius: 0.18, fill: { color: 'FFFFFF', transparency: 90 }, line: { color: 'FFFFFF', width: 1, transparency: 65 } });
+        slide.addShape('rect', { x: 0.75, y: 3.1, w: 8.5, h: 0.02, fill: { color: 'A855F7', transparency: 45 }, line: { type: 'none' } });
+        break;
+
+      case 'prestige':
+        slide.background = { fill: '0B1628' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.18, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.445, w: 10, h: 0.18, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0.18, w: 0.04, h: 5.265, fill: { color: 'D4AF37', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.5, y: 3.1, w: 9.0, h: 0.02, fill: { color: 'D4AF37', transparency: 35 }, line: { type: 'none' } });
+        break;
+
+      case 'split-bold':
+        slide.addShape('rect', { x: 0, y: 0, w: 3.6, h: 5.625, fill: { color: '4338CA' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.6, y: 0, w: 0.12, h: 5.625, fill: { color: '5B21B6' }, line: { type: 'none' } });
+        slide.background = { fill: 'F8F8FC' };
+        slide.addShape('rect', { x: 9.8, y: 0, w: 0.2, h: 5.625, fill: { color: '4338CA', transparency: 55 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.85, y: 3.1, w: 5.9, h: 0.03, fill: { color: '4338CA', transparency: 30 }, line: { type: 'none' } });
+        break;
+
+      case 'blueprint':
+        slide.background = { fill: '0D1B2A' };
+        [0.75, 1.5, 2.25, 3.0, 3.75, 4.5].forEach(y => {
+          slide.addShape('rect', { x: 0, y, w: 10, h: 0.012, fill: { color: '00C2FF', transparency: 88 }, line: { type: 'none' } });
+        });
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].forEach(x => {
+          slide.addShape('rect', { x, y: 0, w: 0.012, h: 5.625, fill: { color: '00C2FF', transparency: 88 }, line: { type: 'none' } });
+        });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.05, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.575, w: 10, h: 0.05, fill: { color: '00C2FF', transparency: 20 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.05, h: 5.625, fill: { color: '00C2FF', transparency: 18 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.25, y: 3.1, w: 9.5, h: 0.02, fill: { color: '00C2FF', transparency: 35 }, line: { type: 'none' } });
+        break;
+
+      case 'aurora':
+        slide.background = { fill: '060A14' };
+        slide.addShape('ellipse', { x: -4, y: 0.5, w: 10, h: 4.5, fill: { color: '0D9488', transparency: 70 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: -2, y: 2.0, w: 8, h: 3.5, fill: { color: '059669', transparency: 78 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 1.5, y: -1.0, w: 10, h: 4.5, fill: { color: '7C3AED', transparency: 80 }, line: { type: 'none' } });
+        slide.addShape('ellipse', { x: 4.5, y: 1.5, w: 8, h: 4.0, fill: { color: 'DB2777', transparency: 84 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.04, fill: { color: '2DD4BF', transparency: 32 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.585, w: 10, h: 0.04, fill: { color: '2DD4BF', transparency: 52 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.02, fill: { color: '2DD4BF', transparency: 42 }, line: { type: 'none' } });
+        break;
+
+      case 'minimal':
+        slide.background = { fill: '1E293B' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.04, fill: { color: '94A3B8', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.585, w: 10, h: 0.04, fill: { color: '94A3B8', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.02, fill: { color: '64748B', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'luxury':
+        slide.background = { fill: '1C1408' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: 'D4AF37' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.18, y: 0.18, w: 9.64, h: 0.015, fill: { color: 'D4AF37', transparency: 50 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.18, y: 5.435, w: 9.64, h: 0.015, fill: { color: 'D4AF37', transparency: 50 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.015, fill: { color: 'D4AF37', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'academic':
+        slide.background = { fill: '1B3A5C' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.08, fill: { color: '2563EB' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.545, w: 10, h: 0.08, fill: { color: '2563EB' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.55, y: 0, w: 0.03, h: 5.625, fill: { color: 'FF6B6B' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.02, fill: { color: '93C5FD', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'nature':
+        slide.background = { fill: '0D3B1F' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.06, fill: { color: '16A34A' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: '16A34A' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.08, h: 5.625, fill: { color: '22C55E', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.02, fill: { color: '4ADE80', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'retro':
+        slide.background = { fill: '2D1F0A' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.1, fill: { color: 'FF6B35' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.525, w: 10, h: 0.1, fill: { color: 'FF6B35' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0.1, w: 10, h: 0.02, fill: { color: 'FFA500', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.505, w: 10, h: 0.02, fill: { color: 'FFA500', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.02, fill: { color: 'FF6B35', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'magazine':
+        slide.background = { fill: '111111' };
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.12, fill: { color: 'E11D48' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.505, w: 10, h: 0.12, fill: { color: 'E11D48' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 0, w: 0.08, h: 5.625, fill: { color: 'E11D48' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 9.92, y: 0, w: 0.08, h: 5.625, fill: { color: 'E11D48', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.08, y: 0.22, w: 9.84, h: 0.025, fill: { color: 'E11D48', transparency: 55 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 3.5, y: 0.12, w: 0.03, h: 5.385, fill: { color: 'E11D48', transparency: 75 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.02, fill: { color: 'E11D48', transparency: 40 }, line: { type: 'none' } });
+        break;
+
+      case 'startup':
+        slide.background = { fill: '0F172A' };
+        slide.addShape('rect', { x: 0, y: 0, w: 0.12, h: 5.625, fill: { color: 'EA580C' }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.25, w: 10, h: 0.375, fill: { color: 'EA580C', transparency: 30 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0, y: 5.44, w: 10, h: 0.185, fill: { color: 'FF6B35', transparency: 40 }, line: { type: 'none' } });
+        slide.addShape('rect', { x: 0.65, y: 3.1, w: 8.7, h: 0.03, fill: { color: 'EA580C', transparency: 40 }, line: { type: 'none' } });
         break;
 
       default:

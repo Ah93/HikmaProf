@@ -45,6 +45,7 @@ voice_video_lock = threading.Lock()
 # Configuration
 UPLOAD_FOLDER = './uploads'
 OUTPUT_FOLDER = './output'
+CUSTOM_AVATAR_DIR = os.path.join(os.path.dirname(__file__), 'static', 'avatar', 'custom')
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'tex'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
@@ -1026,6 +1027,8 @@ def run_pipeline_background(job_id, file_path, output_name, skip_validation, tem
 
         # Set up environment
         env = os.environ.copy()
+        if color_scheme == 'default':
+            color_scheme = TEMPLATE_DEFAULT_COLORS.get(template_style, 'blue')
         env['SKIP_VALIDATION'] = 'true' if skip_validation else 'false'
         env['TEMPLATE_STYLE'] = template_style
         env['COLOR_SCHEME'] = color_scheme
@@ -1655,6 +1658,45 @@ def clone_voice():
         return jsonify({'error': f'XTTS server unavailable: {e}'}), 503
 
 
+@app.route('/api/upload-avatar', methods=['POST'])
+def upload_custom_avatar():
+    """Upload a personal avatar MP4 (white background). Returns avatar_id."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in ('.mp4', '.mov', '.webm'):
+        return jsonify({'error': 'Unsupported format. Use MP4, MOV, or WebM'}), 400
+
+    os.makedirs(CUSTOM_AVATAR_DIR, exist_ok=True)
+    avatar_id  = str(uuid.uuid4())
+    raw_path   = os.path.join(CUSTOM_AVATAR_DIR, f'{avatar_id}_raw{ext}')
+    final_path = os.path.join(CUSTOM_AVATAR_DIR, f'{avatar_id}.mp4')
+    f.save(raw_path)
+
+    try:
+        import subprocess as _sp2
+        _sp2.run([
+            'ffmpeg', '-y', '-i', raw_path,
+            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+            '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+            '-an', '-r', '25',
+            final_path,
+        ], check=True, capture_output=True)
+        os.remove(raw_path)
+        print(f'[CUSTOM-AVATAR] Saved {avatar_id}.mp4  ({os.path.getsize(final_path):,} bytes)')
+    except Exception as e:
+        print(f'[CUSTOM-AVATAR] Normalization failed ({e}), using raw file')
+        try:
+            os.rename(raw_path, final_path)
+        except Exception:
+            pass
+
+    return jsonify({'avatar_id': avatar_id}), 201
+
+
 @app.route('/api/avatar-video', methods=['POST'])
 def avatar_video_standalone():
     """Standalone avatar video: upload PPTX/PDF + optional script → video."""
@@ -1667,12 +1709,24 @@ def avatar_video_standalone():
     if not (fname.endswith('.pptx') or fname.endswith('.pdf')):
         return jsonify({'error': 'Only .pptx or .pdf files are supported'}), 400
 
-    avatar_choice   = request.form.get('avatar_choice', '')
-    voice_choice    = request.form.get('voice_choice', 'edge-tts')
-    speaker_choice  = request.form.get('speaker_choice', '')
-    avatar_position = request.form.get('avatar_position', 'bottom-right')
-    language        = request.form.get('language', 'en')
-    voice_id        = request.form.get('voice_id', '').strip()
+    avatar_choice    = request.form.get('avatar_choice', '')
+    voice_choice     = request.form.get('voice_choice', 'edge-tts')
+    speaker_choice   = request.form.get('speaker_choice', '')
+    avatar_position  = request.form.get('avatar_position', 'bottom-right')
+    language         = request.form.get('language', 'en')
+    voice_id         = request.form.get('voice_id', '').strip()
+    custom_avatar_id = request.form.get('custom_avatar_id', '').strip()
+    presenter_name   = request.form.get('presenter_name', '').strip()
+
+    # Resolve custom avatar (overrides avatar_choice when present)
+    custom_avatar_path = None
+    if custom_avatar_id:
+        _ca = os.path.join(CUSTOM_AVATAR_DIR, f'{custom_avatar_id}.mp4')
+        if os.path.exists(_ca):
+            custom_avatar_path = _ca
+            print(f'[AVATAR-VIDEO] Using custom avatar: {_ca}')
+        else:
+            print(f'[AVATAR-VIDEO] Custom avatar not found: {_ca}')
 
     # Resolve voice here — unambiguous, fully logged, no risk of it changing later
     _av_gender = _AVATAR_GENDER.get(avatar_choice)
@@ -1717,7 +1771,9 @@ def avatar_video_standalone():
             _update_voice_job(job_id, 'starting', 0)
             _generate_voice_video_background(
                 job_id, job_dir, slides_path, transcript_path,
-                output_path, language, avatar_choice, tts_voice, voice_id
+                output_path, language, avatar_choice, tts_voice, voice_id,
+                custom_avatar_path=custom_avatar_path,
+                presenter_name=presenter_name,
             )
         except Exception as e:
             print(f'[AVATAR-VIDEO] Error: {e}')
@@ -1874,9 +1930,10 @@ def continue_from_preview(job_id):
 
             # Set up environment
             env = os.environ.copy()
+            effective_color = TEMPLATE_DEFAULT_COLORS.get(template_style, 'blue') if color_scheme == 'default' else color_scheme
             env['SKIP_VALIDATION'] = 'true' if skip_validation else 'false'
             env['TEMPLATE_STYLE'] = template_style
-            env['COLOR_SCHEME'] = color_scheme
+            env['COLOR_SCHEME'] = effective_color
             env['PRESENTATION_LANGUAGE'] = language
 
             # AI provider settings are inherited from .env file
@@ -2478,6 +2535,28 @@ _EDGE_TTS_VOICES_MALE = {
 
 XTTS_SERVER_URL = os.environ.get('XTTS_SERVER_URL', 'http://localhost:5001')
 
+# Natural/default color scheme per template — used when user picks "Default (Template Colors)"
+TEMPLATE_DEFAULT_COLORS = {
+    'modern':         'indigo',
+    'minimal':        'slate',
+    'tech':           'dark-teal',
+    'creative':       'purple',
+    'corporate':      'navy',
+    'elegant':        'gold',
+    'startup':        'orange',
+    'magazine':       'red',
+    'academic':       'blue',
+    'nature':         'green',
+    'retro':          'amber',
+    'luxury':         'gold',
+    'blueprint':      'dark-teal',
+    'aurora':         'teal',
+    'dark-neon':      'dark-teal',
+    'glassmorphism':  'dark-purple',
+    'prestige':       'gold',
+    'split-bold':     'indigo',
+}
+
 # Avatar character → gender mapping
 _AVATAR_GENDER = {
     'Professional Female':  'female',
@@ -2576,7 +2655,7 @@ def _tts_audio(text, out_path, language='en', avatar_choice='', tts_voice='', vo
             import tempfile, shutil
             resp = _req.post(
                 f'{XTTS_SERVER_URL}/synthesize',
-                json={'voice_id': voice_id, 'text': clean, 'language': lang},
+                json={'voice_id': voice_id, 'text': clean, 'language': lang, 'speed': 1.1},
                 timeout=120,
             )
             if resp.status_code == 200:
@@ -2716,7 +2795,7 @@ def _update_voice_job(job_id, status, progress, error=''):
         voice_video_jobs[job_id] = {'status': status, 'progress': progress, 'error': error}
 
 
-def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en', avatar_choice='', tts_voice='', voice_id=''):
+def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path, output_path, language='en', avatar_choice='', tts_voice='', voice_id='', custom_avatar_path=None, presenter_name=''):
     """Full pipeline: PPTX → slide images → TTS audio → compose clips → concatenate."""
     try:
         import fitz  # PyMuPDF
@@ -2745,10 +2824,13 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
         doc.close()
         print(f'[VOICE VIDEO] Rendered {n_slides} slide images')
 
-        # ── Resolve Hikma avatar video (once, before the loop) ────────────────
+        # ── Resolve avatar video (custom overrides Hikma) ─────────────────────
         hikma_vids_folder = os.path.join(os.path.dirname(__file__), 'static', 'avatar', 'hikma avatars vids')
         hikma_avatar_video = None
-        if avatar_choice:
+        if custom_avatar_path and os.path.exists(custom_avatar_path):
+            hikma_avatar_video = custom_avatar_path
+            print(f'[VOICE VIDEO] Using custom avatar: {custom_avatar_path}')
+        elif avatar_choice:
             candidate = os.path.join(hikma_vids_folder, f'{avatar_choice}.mp4')
             if os.path.exists(candidate):
                 hikma_avatar_video = candidate
@@ -2777,7 +2859,7 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
             _update_voice_job(job_id, 'composing_video', 65 + int((i / n_slides) * 25))
             print(f'[VOICE VIDEO] Composing clip {i + 1}/{n_slides}…')
             clip_path = os.path.join(work_dir, f'clip_{i + 1:03d}.mp4')
-            compose_slide_video(img, audio, clip_path, avatar_video=hikma_avatar_video)
+            compose_slide_video(img, audio, clip_path, avatar_video=hikma_avatar_video, presenter_name=presenter_name)
             clip_files.append(clip_path)
 
         # ── Step 6: Concatenate all clips ─────────────────────────────────────
@@ -3545,7 +3627,13 @@ def get_templates():
         {'id': 'storytelling', 'name': 'Storytelling', 'description': 'Narrative-focused, emotional, book-like presentation', 'category': 'elegant'},
         {'id': 'vibrant', 'name': 'Vibrant Pop', 'description': 'High-energy colors, dynamic gradients, youth-oriented', 'category': 'creative'},
         {'id': 'monochrome', 'name': 'Monochrome', 'description': 'Black and white, high contrast, timeless elegance', 'category': 'minimal'},
-        {'id': 'gradient', 'name': 'Gradient Flow', 'description': 'Smooth gradients, fluid design, modern aesthetics', 'category': 'modern'}
+        {'id': 'gradient', 'name': 'Gradient Flow', 'description': 'Smooth gradients, fluid design, modern aesthetics', 'category': 'modern'},
+        {'id': 'dark-neon', 'name': 'Dark Neon', 'description': 'Black background with neon cyan accents, cyberpunk aesthetic', 'category': 'modern'},
+        {'id': 'glassmorphism', 'name': 'Glassmorphism', 'description': 'Deep purple gradient with frosted glass card overlays', 'category': 'modern'},
+        {'id': 'prestige', 'name': 'Prestige', 'description': 'Deep navy with gold bars, authoritative academic style', 'category': 'elegant'},
+        {'id': 'split-bold', 'name': 'Split Bold', 'description': 'Bold left color panel with white content area, editorial impact', 'category': 'creative'},
+        {'id': 'blueprint', 'name': 'Blueprint', 'description': 'Technical drafting aesthetic — dark navy grid, cyan crosshairs, monospace precision', 'category': 'modern'},
+        {'id': 'aurora', 'name': 'Aurora', 'description': 'Northern-lights gradient layers on deep space-dark background', 'category': 'creative'}
     ]
 
     colors = [

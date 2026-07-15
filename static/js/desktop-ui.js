@@ -3445,6 +3445,14 @@ function setupAvatarVideoTab() {
     });
 }
 
+function avToggleCollapse(bodyId, chevronId) {
+    const body    = document.getElementById(bodyId);
+    const chevron = document.getElementById(chevronId);
+    if (!body) return;
+    const open = body.classList.toggle('open');
+    if (chevron) chevron.classList.toggle('open', open);
+}
+
 async function avOnVoiceSelect(input) {
     const file = input.files[0];
     if (!file) return;
@@ -3480,11 +3488,75 @@ async function avOnVoiceSelect(input) {
         statusEl.style.background = '#052e16';
         statusEl.style.color = '#4ade80';
         statusEl.textContent = '✅ Voice sample uploaded successfully';
+        // Keep expanded so user sees the success state
+        const vBody = document.getElementById('avVoiceBody');
+        const vChev = document.getElementById('avVoiceChevron');
+        if (vBody && !vBody.classList.contains('open')) { vBody.classList.add('open'); if (vChev) vChev.classList.add('open'); }
     } catch (err) {
         statusEl.style.background = '#450a0a';
         statusEl.style.color = '#fca5a5';
         statusEl.textContent = '❌ Error: ' + err.message;
         voiceIdEl.value = '';
+    }
+}
+
+async function avOnAvatarVideoSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('avAvatarVideoStatus');
+    const iconEl   = document.getElementById('avAvatarVideoIcon');
+    const textEl   = document.getElementById('avAvatarVideoText');
+    const idEl     = document.getElementById('avCustomAvatarId');
+    const nameWrap = document.getElementById('avPresenterNameWrap');
+
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#1e293b';
+    statusEl.style.color = '#94a3b8';
+    statusEl.textContent = '⏳ Uploading avatar video...';
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+        const resp = await fetch(`${APP_PREFIX}/api/upload-avatar`, { method: 'POST', body: fd });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            statusEl.style.background = '#450a0a';
+            statusEl.style.color = '#fca5a5';
+            statusEl.textContent = '❌ ' + (data.error || 'Upload failed');
+            idEl.value = '';
+            return;
+        }
+
+        idEl.value = data.avatar_id;
+        iconEl.textContent = '✅';
+        textEl.innerHTML = `<strong style="color:#38bdf8;">${file.name}</strong> — your avatar is ready`;
+        statusEl.style.background = '#082f49';
+        statusEl.style.color = '#38bdf8';
+        statusEl.textContent = '✅ Avatar uploaded — will be used as presenter in the video';
+        nameWrap.style.display = 'block';
+        // Keep expanded so user sees the success state and name field
+        const aBody = document.getElementById('avAvatarBody');
+        const aChev = document.getElementById('avAvatarChevron');
+        if (aBody && !aBody.classList.contains('open')) { aBody.classList.add('open'); if (aChev) aChev.classList.add('open'); }
+
+        // Deselect any Hikma avatar (custom takes priority, switch to No Avatar)
+        document.querySelectorAll('#avatarGalleryAV .hikma-avatar-option').forEach(el => el.classList.remove('selected'));
+        const noAvatarOpt = document.querySelector('#avatarGalleryAV .hikma-avatar-option[data-avatar=""]');
+        if (noAvatarOpt) noAvatarOpt.classList.add('selected');
+        const avChoiceInput = document.getElementById('avAvatarChoice');
+        if (avChoiceInput) avChoiceInput.value = '';
+
+        // Show Clone Your Voice card for narration
+        const voiceCloneCard = document.getElementById('avVoiceCloneCard');
+        if (voiceCloneCard) voiceCloneCard.style.display = 'block';
+    } catch (err) {
+        statusEl.style.background = '#450a0a';
+        statusEl.style.color = '#fca5a5';
+        statusEl.textContent = '❌ Error: ' + err.message;
+        idEl.value = '';
     }
 }
 

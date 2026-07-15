@@ -41,7 +41,7 @@
                     </a>
                     <a class="nav-item" data-panel="avatar-video" onclick="switchPanel('avatar-video', this)">
                         <span class="nav-item-icon">🎬</span>
-                        <span class="nav-item-text">Avatar Video</span>
+                        <span class="nav-item-text">Video Presenter</span>
                     </a>
                 </div>
 
@@ -244,7 +244,7 @@
                         </div>
 
                         <input type="hidden" id="templateStyle" name="template_style" value="modern">
-                        <input type="hidden" id="colorScheme" name="color_scheme" value="blue">
+                        <input type="hidden" id="colorScheme" name="color_scheme" value="default">
                         <input type="hidden" id="presentationType" name="presentation_type" value="pptx">
                         <input type="hidden" id="numImages" name="num_images" value="0">
                         <input type="hidden" id="aiStyle"  name="ai_style"   value="dark-tech">
@@ -655,29 +655,71 @@
                             <input type="hidden" name="avatar_position" value="bottom-right">
                         </div>
 
-                        <!-- Voice Cloning Card — only shown when No Avatar is selected -->
-                        <div class="form-card" id="avVoiceCloneCard" style="display:block;">
-                            <div class="form-card-header">
-                                <h3 class="form-card-title">🎙️ Clone Your Voice <span style="font-size:11px;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;">NEW</span></h3>
-                                <p class="form-card-description">Upload a 6–30 sec recording to narrate the video in your own voice. Optional — leave empty to use the default AI voice.</p>
-                            </div>
-                            <div class="file-upload-area" id="avVoiceDropZone"
-                                 onclick="document.getElementById('avVoiceInput').click()"
-                                 style="cursor:pointer;">
-                                <div class="file-upload-icon" id="avVoiceIcon">🎙️</div>
-                                <div class="file-upload-text" id="avVoiceText">
-                                    Drop WAV or MP3 here, or click to browse<br>
-                                    <span style="font-size:11px;color:#94a3b8;">6–30 seconds · quiet room · no background noise</span>
+                        <!-- Voice Cloning Card — collapsible -->
+                        <div class="form-card av-collapsible-card" id="avVoiceCloneCard" style="display:block;">
+                            <div class="av-collapse-header" onclick="avToggleCollapse('avVoiceBody','avVoiceChevron')">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                        <span style="font-size:15px;font-weight:600;color:#1e293b;">🎙️ Clone Your Voice</span>
+                                        <span style="font-size:11px;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;">NEW</span>
+                                    </div>
+                                    <p style="font-size:12px;color:#64748b;margin:3px 0 0;">Upload a recording to narrate in your own voice. Optional.</p>
                                 </div>
-                                <input type="file" id="avVoiceInput" accept=".wav,.mp3,.ogg,.flac"
-                                       style="display:none;" onchange="avOnVoiceSelect(this)">
+                                <span class="av-chevron" id="avVoiceChevron">▾</span>
                             </div>
-                            <div id="avVoiceStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                            <div class="av-collapse-body" id="avVoiceBody">
+                                <div class="file-upload-area" id="avVoiceDropZone"
+                                     onclick="document.getElementById('avVoiceInput').click()"
+                                     style="cursor:pointer;">
+                                    <div class="file-upload-icon" id="avVoiceIcon">🎙️</div>
+                                    <div class="file-upload-text" id="avVoiceText">
+                                        Drop WAV or MP3 here, or click to browse<br>
+                                        <span style="font-size:11px;color:#94a3b8;">6–30 seconds · quiet room · no background noise</span>
+                                    </div>
+                                    <input type="file" id="avVoiceInput" accept=".wav,.mp3,.ogg,.flac"
+                                           style="display:none;" onchange="avOnVoiceSelect(this)">
+                                </div>
+                                <div id="avVoiceStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                            </div>
                             <input type="hidden" id="avVoiceId" name="voice_id" value="">
                         </div>
 
+                        <!-- Upload Your Avatar Card — collapsible -->
+                        <div class="form-card av-collapsible-card" id="avCustomAvatarCard">
+                            <div class="av-collapse-header" onclick="avToggleCollapse('avAvatarBody','avAvatarChevron')">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                        <span style="font-size:15px;font-weight:600;color:#1e293b;">🎭 Upload Your Avatar</span>
+                                        <span style="font-size:11px;background:#0ea5e9;color:#fff;padding:2px 8px;border-radius:10px;">NEW</span>
+                                    </div>
+                                    <p style="font-size:12px;color:#64748b;margin:3px 0 0;">6–10 sec MP4, white background. Overrides the avatar above.</p>
+                                </div>
+                                <span class="av-chevron" id="avAvatarChevron">▾</span>
+                            </div>
+                            <div class="av-collapse-body" id="avAvatarBody">
+                                <div class="file-upload-area" id="avAvatarVideoDropZone"
+                                     onclick="document.getElementById('avAvatarVideoInput').click()"
+                                     style="cursor:pointer;">
+                                    <div class="file-upload-icon" id="avAvatarVideoIcon">🎭</div>
+                                    <div class="file-upload-text" id="avAvatarVideoText">
+                                        Drop MP4 here, or click to browse<br>
+                                        <span style="font-size:11px;color:#94a3b8;">6–10 seconds · white background · head &amp; shoulders visible</span>
+                                    </div>
+                                    <input type="file" id="avAvatarVideoInput" accept=".mp4,.mov"
+                                           style="display:none;" onchange="avOnAvatarVideoSelect(this)">
+                                </div>
+                                <div id="avPresenterNameWrap" style="display:none;margin-top:10px;">
+                                    <input type="text" id="avPresenterName" name="presenter_name"
+                                           placeholder="Your name (shown in the video side panel)"
+                                           style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#e2e8f0;font-size:13px;outline:none;">
+                                </div>
+                                <div id="avAvatarVideoStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                            </div>
+                            <input type="hidden" id="avCustomAvatarId" name="custom_avatar_id" value="">
+                        </div>
+
                         <button type="submit" class="btn-primary" id="avGenerateBtn">
-                            🎬 Generate Avatar Video
+                            🎬 Generate Video
                         </button>
                     </form>
 
@@ -883,6 +925,24 @@
             transition: background 0.15s, color 0.15s;
         }
         .job-delete-btn:hover { background: #C09A45; color: #fff; }
+
+        /* ── Collapsible cards (Clone Voice / Upload Avatar) ─────────── */
+        .av-collapsible-card { padding: 16px 20px !important; margin-bottom: 12px !important; }
+        .av-collapse-header {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; user-select: none; gap: 10px;
+        }
+        .av-collapse-header:hover .av-chevron { color: #6366f1; }
+        .av-chevron {
+            font-size: 20px; color: #94a3b8; flex-shrink: 0; line-height: 1;
+            transition: transform 0.28s ease, color 0.2s ease;
+        }
+        .av-chevron.open { transform: rotate(180deg); color: #6366f1; }
+        .av-collapse-body {
+            overflow: hidden; max-height: 0; margin-top: 0; opacity: 0;
+            transition: max-height 0.32s ease, margin-top 0.28s ease, opacity 0.22s ease;
+        }
+        .av-collapse-body.open { max-height: 700px; margin-top: 14px; opacity: 1; }
     </style>
 
     <script>window.APP_PREFIX = '{{ request.script_root }}';</script>
@@ -931,10 +991,13 @@
             el.classList.add('selected');
             const avatarVal = el.getAttribute('data-avatar');
             document.getElementById(hiddenInputId).value = avatarVal;
-            // Show voice clone card only in Avatar Video tab when No Avatar is chosen
+            // In Video Presenter tab: toggle voice clone + custom avatar cards
             if (hiddenInputId === 'avAvatarChoice') {
-                const card = document.getElementById('avVoiceCloneCard');
-                if (card) card.style.display = avatarVal === '' ? 'block' : 'none';
+                const noAvatar = avatarVal === '';
+                const voiceCard  = document.getElementById('avVoiceCloneCard');
+                const avatarCard = document.getElementById('avCustomAvatarCard');
+                if (voiceCard)  voiceCard.style.display  = noAvatar ? 'block' : 'none';
+                if (avatarCard) avatarCard.style.display = noAvatar ? 'block' : 'none';
             }
         }
     </script>
