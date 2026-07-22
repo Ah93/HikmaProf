@@ -74,7 +74,7 @@ def update_job_status(job_id, status, **kwargs):
             })
 
 
-def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, avatar_choice, voice_choice, speaker_choice, avatar_position, custom_positions=None):
+def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, avatar_choice, voice_choice, speaker_choice, avatar_position, custom_positions=None, voice_id='', custom_avatar_id=None, presenter_name=''):
     """Generate video from PPTX and transcript"""
     import time as time_module
     video_start_time = time_module.time()
@@ -119,7 +119,8 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
             print(f"[VIDEO GEN] Generated {len(slide_images)} slide images")
 
         # If no custom positions provided, pause and wait for user to position avatar
-        if custom_positions is None:
+        # Skip positioning when using custom avatar or voice_id only (side-panel — no drag needed)
+        if custom_positions is None and not custom_avatar_id and not voice_id:
             print(f"[VIDEO GEN] Pausing for avatar positioning...")
 
             # Generate slide image URLs for frontend
@@ -141,7 +142,8 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
                             avatar_url=avatar_url)
             return True  # Pause here
 
-        print(f"[VIDEO GEN] Using custom avatar positions for {len(custom_positions)} slides")
+        if custom_positions is not None:
+            print(f"[VIDEO GEN] Using custom avatar positions for {len(custom_positions)} slides")
 
         # Step 2: Generating audio (72-80%)
         update_job_status(job_id, 'video_generation', progress=72,
@@ -288,13 +290,16 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
                              step=f'Generating audio ({idx+1}/{num_slides})',
                              step_description=f'Creating narration for slide {idx+1}')
 
-            generate_speech(
-                text,
-                audio_path,
-                model_name=voice_choice,
-                speaker_idx=_effective_voice,
-                language=_job_language
-            )
+            if voice_id:
+                _tts_audio(text, audio_path, language=_job_language, avatar_choice=avatar_choice, voice_id=voice_id)
+            else:
+                generate_speech(
+                    text,
+                    audio_path,
+                    model_name=voice_choice,
+                    speaker_idx=_effective_voice,
+                    language=_job_language
+                )
             audio_files.append(audio_path)
 
         # Step 3: Resolve Hikma avatar video (no animation needed — pre-built videos)
@@ -304,7 +309,14 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
 
         hikma_vids_folder = os.path.join(os.path.dirname(__file__), 'static', 'avatar', 'hikma avatars vids')
         hikma_avatar_video = None
-        if avatar_choice:
+        if custom_avatar_id:
+            _ca_path = os.path.join(CUSTOM_AVATAR_DIR, f'{custom_avatar_id}.mp4')
+            if os.path.exists(_ca_path):
+                hikma_avatar_video = _ca_path
+                print(f"[VIDEO GEN] Using custom avatar video: {hikma_avatar_video}")
+            else:
+                print(f"[VIDEO GEN] Warning: custom avatar not found at {_ca_path}")
+        elif avatar_choice:
             candidate = os.path.join(hikma_vids_folder, f'{avatar_choice}.mp4')
             if os.path.exists(candidate):
                 hikma_avatar_video = candidate
@@ -335,7 +347,8 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
                 audio_file,
                 final_slide_video,
                 avatar_video=hikma_avatar_video,
-                avatar_position=avatar_position
+                avatar_position=avatar_position,
+                presenter_name=presenter_name
             )
             elapsed = int(time.time() - start_time)
             print(f"[VIDEO GEN] Slide {idx+1} composed in {elapsed}s")
@@ -1016,7 +1029,7 @@ def _run_images_only_background(job_id, file_path, filename, num_images, ai_colo
                 pass
 
 
-def run_pipeline_background(job_id, file_path, output_name, skip_validation, template_style, color_scheme, preview_slides=False, avatar_choice='', voice_choice='gtts', speaker_choice='', avatar_position='side-left', generate_images=False, image_style='professional', skip_backgrounds=False, num_slides=12, slide_layout='default', language='en', num_images=0):
+def run_pipeline_background(job_id, file_path, output_name, skip_validation, template_style, color_scheme, preview_slides=False, avatar_choice='', voice_choice='gtts', speaker_choice='', avatar_position='side-left', generate_images=False, image_style='professional', skip_backgrounds=False, num_slides=12, slide_layout='default', language='en', num_images=0, voice_id='', custom_avatar_id=None, presenter_name=''):
     """Run the pipeline in background thread"""
     progress_file = os.path.join(OUTPUT_FOLDER, 'jobs', job_id, 'progress.txt')
     os.makedirs(os.path.dirname(progress_file), exist_ok=True)
@@ -1180,8 +1193,51 @@ def run_pipeline_background(job_id, file_path, output_name, skip_validation, tem
                     output_label    = f'{output_name}.pptx'
                     download_url_base = f'/api/download/{job_id}/{output_label}'
 
-                    if avatar_choice:
-                        print(f"[VIDEO] Starting video generation for job {job_id}")
+                    if (voice_id or custom_avatar_id) and transcript_dst and os.path.exists(transcript_dst):
+                        # ── New path: use the proven voice-video pipeline ─────────
+                        print(f"[VIDEO] Using voice-video pipeline (voice_id={bool(voice_id)}, custom_avatar={bool(custom_avatar_id)})")
+                        update_job_status(job_id, 'video_generation', progress=65,
+                                        step='Generating video',
+                                        step_description='Processing slides with your voice and avatar')
+
+                        _vid_out = os.path.join(job_output_dir, f'{output_name}_video.mp4')
+                        _ca_path = None
+                        if custom_avatar_id:
+                            _p = os.path.join(CUSTOM_AVATAR_DIR, f'{custom_avatar_id}.mp4')
+                            if os.path.exists(_p):
+                                _ca_path = _p
+                            else:
+                                print(f"[VIDEO] Custom avatar file not found: {_p}")
+
+                        _tmp_vid_id = f'pptx_{job_id}'
+                        _generate_voice_video_background(
+                            _tmp_vid_id, job_output_dir, final_pptx_path, transcript_dst,
+                            _vid_out, language, avatar_choice, '', voice_id, _ca_path, presenter_name
+                        )
+
+                        _vr = voice_video_jobs.get(_tmp_vid_id, {})
+                        with voice_video_lock:
+                            voice_video_jobs.pop(_tmp_vid_id, None)
+
+                        if _vr.get('status') == 'done' and os.path.exists(_vid_out):
+                            update_job_status(job_id, 'completed', progress=100,
+                                            output_file=output_label,
+                                            download_url=download_url_base,
+                                            metadata=metadata,
+                                            logs=result_stdout,
+                                            video_file=f'{output_name}_video.mp4',
+                                            video_url=f'/api/download/{job_id}/{output_name}_video.mp4')
+                        else:
+                            update_job_status(job_id, 'completed', progress=100,
+                                            output_file=output_label,
+                                            download_url=download_url_base,
+                                            metadata=metadata,
+                                            logs=result_stdout,
+                                            video_error=_vr.get('error', 'Video generation failed'))
+
+                    elif avatar_choice:
+                        # ── Existing Hikma-avatar path with positioning UI ─────────
+                        print(f"[VIDEO] Starting Hikma-avatar video for job {job_id}")
                         update_job_status(job_id, 'video_generation', progress=65,
                                         step='Starting video generation',
                                         step_description='Processing video with avatar')
@@ -1196,7 +1252,6 @@ def run_pipeline_background(job_id, file_path, output_name, skip_validation, tem
                             if not video_success:
                                 print(f"[VIDEO] Video generation returned False")
                         else:
-                            print(f"[VIDEO] Transcript not found, skipping video generation")
                             update_job_status(job_id, 'completed', progress=100,
                                             output_file=output_label,
                                             download_url=download_url_base,
@@ -1204,7 +1259,7 @@ def run_pipeline_background(job_id, file_path, output_name, skip_validation, tem
                                             logs=result_stdout,
                                             video_error='Transcript not found for video generation')
                     else:
-                        print(f"[VIDEO] No avatar selected, skipping video generation")
+                        print(f"[VIDEO] No avatar/voice selected, skipping video generation")
                         update_job_status(job_id, 'completed', progress=100,
                                         output_file=output_label,
                                         download_url=download_url_base,
@@ -1396,6 +1451,9 @@ def generate_presentation():
     voice_choice = request.form.get('voice_choice', 'gtts')
     avatar_position = request.form.get('avatar_position', 'side-left')
     speaker_choice = request.form.get('speaker_choice', '')
+    voice_id = request.form.get('voice_id', '').strip()
+    custom_avatar_id = request.form.get('custom_avatar_id', '').strip() or None
+    presenter_name = request.form.get('presenter_name', '').strip()
 
     # Image generation parameters
     generate_images_param = request.form.get('generate_images', 'false')
@@ -1465,6 +1523,9 @@ def generate_presentation():
             'num_slides': num_slides,
             'language': language,
             'num_images': num_images,
+            'voice_id': voice_id,
+            'custom_avatar_id': custom_avatar_id,
+            'presenter_name': presenter_name,
             'created_at': datetime.now(timezone.utc).isoformat(),
             'last_updated': datetime.now(timezone.utc).isoformat()
         }
@@ -1478,7 +1539,8 @@ def generate_presentation():
     # Start background thread
     thread = threading.Thread(
         target=run_pipeline_background,
-        args=(job_id, file_path, output_name, skip_validation, template_style, color_scheme, preview_slides, avatar_choice, voice_choice, speaker_choice, avatar_position, generate_images, image_style, skip_backgrounds, num_slides, slide_layout, language, num_images)
+        args=(job_id, file_path, output_name, skip_validation, template_style, color_scheme, preview_slides, avatar_choice, voice_choice, speaker_choice, avatar_position, generate_images, image_style, skip_backgrounds, num_slides, slide_layout, language, num_images),
+        kwargs={'voice_id': voice_id, 'custom_avatar_id': custom_avatar_id, 'presenter_name': presenter_name}
     )
     thread.daemon = True
     thread.start()
@@ -1859,6 +1921,9 @@ def save_avatar_positions(job_id):
             voice_choice = jobs[job_id].get('voice_choice', 'gtts')
             speaker_choice = jobs[job_id].get('speaker_choice', '')
             avatar_position = jobs[job_id].get('avatar_position', 'side-left')
+            voice_id = jobs[job_id].get('voice_id', '')
+            custom_avatar_id = jobs[job_id].get('custom_avatar_id', None)
+            presenter_name = jobs[job_id].get('presenter_name', '')
 
             if not pptx_path or not transcript_path:
                 update_job_status(job_id, 'failed', error='Missing PPTX or transcript path')
@@ -1868,7 +1933,10 @@ def save_avatar_positions(job_id):
             generate_video_from_pptx(
                 job_id, pptx_path, transcript_path,
                 output_name, avatar_choice, voice_choice, speaker_choice, avatar_position,
-                custom_positions=positions
+                custom_positions=positions,
+                voice_id=voice_id,
+                custom_avatar_id=custom_avatar_id,
+                presenter_name=presenter_name
             )
 
         except Exception as e:
@@ -1996,7 +2064,7 @@ import {{ PresentationPipeline }} from '{pipeline_abs_path}';
                 encoding='utf-8',
                 errors='replace',
                 env=env,
-                timeout=600  # Reduced timeout since no validation (10 min max)
+                timeout=3600  # 60 min max for PPTX generation from approved plan
             )
 
             if result.returncode == 0:
@@ -2022,13 +2090,55 @@ import {{ PresentationPipeline }} from '{pipeline_abs_path}';
                         transcript_dst = os.path.join(job_dir, f'{output_name}_transcript.txt')
                         shutil.copy2(transcript_src, transcript_dst)
 
-                    # Generate video if avatar was selected originally
+                    # Generate video if avatar/voice was selected originally
                     avatar_choice = job.get('avatar_choice', '')
                     voice_choice = job.get('voice_choice', 'gtts')
                     speaker_choice = job.get('speaker_choice', '')
                     avatar_position = job.get('avatar_position', 'side-left')
+                    voice_id = job.get('voice_id', '')
+                    custom_avatar_id = job.get('custom_avatar_id', None)
+                    presenter_name = job.get('presenter_name', '')
 
-                    if avatar_choice and transcript_dst and os.path.exists(transcript_dst):
+                    if (voice_id or custom_avatar_id) and transcript_dst and os.path.exists(transcript_dst):
+                        print(f"[VIDEO] continue_from_preview: voice-video pipeline (voice_id={bool(voice_id)}, custom_avatar={bool(custom_avatar_id)})")
+                        update_job_status(job_id, 'video_generation', progress=65,
+                                        step='Generating video',
+                                        step_description='Processing slides with your voice and avatar')
+
+                        _vid_out = os.path.join(job_dir, f'{output_name}_video.mp4')
+                        _ca_path = None
+                        if custom_avatar_id:
+                            _p = os.path.join(CUSTOM_AVATAR_DIR, f'{custom_avatar_id}.mp4')
+                            if os.path.exists(_p):
+                                _ca_path = _p
+                            else:
+                                print(f"[VIDEO] Custom avatar file not found: {_p}")
+
+                        _tmp_vid_id = f'pptx_{job_id}'
+                        _generate_voice_video_background(
+                            _tmp_vid_id, job_dir, final_pptx_path, transcript_dst,
+                            _vid_out, language, avatar_choice, '', voice_id, _ca_path, presenter_name
+                        )
+
+                        _vr = voice_video_jobs.get(_tmp_vid_id, {})
+                        with voice_video_lock:
+                            voice_video_jobs.pop(_tmp_vid_id, None)
+
+                        if _vr.get('status') == 'done' and os.path.exists(_vid_out):
+                            update_job_status(job_id, 'completed', progress=100,
+                                            output_file=f'{output_name}.pptx',
+                                            download_url=f'/api/download/{job_id}/{output_name}.pptx',
+                                            logs=result.stdout,
+                                            video_file=f'{output_name}_video.mp4',
+                                            video_url=f'/api/download/{job_id}/{output_name}_video.mp4')
+                        else:
+                            update_job_status(job_id, 'completed', progress=100,
+                                            output_file=f'{output_name}.pptx',
+                                            download_url=f'/api/download/{job_id}/{output_name}.pptx',
+                                            logs=result.stdout,
+                                            video_error=_vr.get('error', 'Video generation failed'))
+
+                    elif avatar_choice and transcript_dst and os.path.exists(transcript_dst):
                         update_job_status(job_id, 'video_generation', progress=65,
                                         step='Starting video generation',
                                         step_description='Processing video with avatar')

@@ -293,6 +293,70 @@
                             <input type="hidden" id="avatarChoiceMain" name="avatar_choice" value="">
                         </div>
 
+                        <!-- Voice Cloning Card — collapsible -->
+                        <div class="form-card av-collapsible-card" id="pptxVoiceCloneCard" style="display:block;">
+                            <div class="av-collapse-header" onclick="avToggleCollapse('pptxVoiceBody','pptxVoiceChevron')">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                        <span style="font-size:15px;font-weight:600;color:#1e293b;">🎙️ Clone Your Voice</span>
+                                    </div>
+                                    <p style="font-size:12px;color:#64748b;margin:3px 0 0;">Upload a recording to narrate in your own voice. Optional.</p>
+                                </div>
+                                <span class="av-chevron" id="pptxVoiceChevron">▾</span>
+                            </div>
+                            <div class="av-collapse-body" id="pptxVoiceBody">
+                                <div class="file-upload-area" id="pptxVoiceDropZone"
+                                     onclick="document.getElementById('pptxVoiceInput').click()"
+                                     style="cursor:pointer;">
+                                    <div class="file-upload-icon" id="pptxVoiceIcon">🎙️</div>
+                                    <div class="file-upload-text" id="pptxVoiceText">
+                                        Drop WAV or MP3 here, or click to browse<br>
+                                        <span style="font-size:11px;color:#94a3b8;">6–30 seconds · quiet room · no background noise</span>
+                                    </div>
+                                    <input type="file" id="pptxVoiceInput" accept=".wav,.mp3,.ogg,.flac"
+                                           style="display:none;" onchange="pptxOnVoiceSelect(this)">
+                                </div>
+                                <div id="pptxVoiceStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                                <button type="button" id="pptxVoiceRemoveBtn" onclick="pptxRemoveVoice()" style="display:none;margin-top:6px;padding:4px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;width:100%;">× Remove voice</button>
+                            </div>
+                            <input type="hidden" id="pptxVoiceId" name="voice_id" value="">
+                        </div>
+
+                        <!-- Upload Your Avatar Card — collapsible -->
+                        <div class="form-card av-collapsible-card" id="pptxCustomAvatarCard" style="display:block;">
+                            <div class="av-collapse-header" onclick="avToggleCollapse('pptxAvatarBody','pptxAvatarChevron')">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                        <span style="font-size:15px;font-weight:600;color:#1e293b;">🎭 Upload Your Avatar</span>
+                                    </div>
+                                    <p style="font-size:12px;color:#64748b;margin:3px 0 0;">6–10 sec MP4, white background. Overrides the avatar above.</p>
+                                </div>
+                                <span class="av-chevron" id="pptxAvatarChevron">▾</span>
+                            </div>
+                            <div class="av-collapse-body" id="pptxAvatarBody">
+                                <div class="file-upload-area" id="pptxAvatarVideoDropZone"
+                                     onclick="document.getElementById('pptxAvatarVideoInput').click()"
+                                     style="cursor:pointer;">
+                                    <div class="file-upload-icon" id="pptxAvatarVideoIcon">🎭</div>
+                                    <div class="file-upload-text" id="pptxAvatarVideoText">
+                                        Drop MP4 here, or click to browse<br>
+                                        <span style="font-size:11px;color:#94a3b8;">6–10 seconds · white background · head &amp; shoulders visible</span>
+                                    </div>
+                                    <input type="file" id="pptxAvatarVideoInput" accept=".mp4,.mov"
+                                           style="display:none;" onchange="pptxOnAvatarVideoSelect(this)">
+                                </div>
+                                <div id="pptxPresenterNameWrap" style="display:block;margin-top:12px;">
+                                    <label style="display:block;font-size:12px;color:#94a3b8;margin-bottom:5px;">👤 Presenter Name <span style="color:#64748b;">(optional — shown below your avatar)</span></label>
+                                    <input type="text" id="pptxPresenterName" name="presenter_name"
+                                           placeholder="e.g. Dr. Ahmed Al-Rashid"
+                                           style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#e2e8f0;font-size:13px;outline:none;">
+                                </div>
+                                <div id="pptxAvatarVideoStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                                <button type="button" id="pptxAvatarRemoveBtn" onclick="pptxRemoveAvatar()" style="display:none;margin-top:6px;padding:4px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;width:100%;">× Remove avatar</button>
+                            </div>
+                            <input type="hidden" id="pptxCustomAvatarId" name="custom_avatar_id" value="">
+                        </div>
+
                         <div class="form-card" id="pptx-layout-section">
                             <div class="form-card-header">
                                 <h3 class="form-card-title">📐 Slide Layout</h3>
@@ -680,6 +744,7 @@
                                            style="display:none;" onchange="avOnVoiceSelect(this)">
                                 </div>
                                 <div id="avVoiceStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                                <button type="button" id="avVoiceRemoveBtn" onclick="avRemoveVoice()" style="display:none;margin-top:6px;padding:4px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;width:100%;">× Remove voice</button>
                             </div>
                             <input type="hidden" id="avVoiceId" name="voice_id" value="">
                         </div>
@@ -708,12 +773,14 @@
                                     <input type="file" id="avAvatarVideoInput" accept=".mp4,.mov"
                                            style="display:none;" onchange="avOnAvatarVideoSelect(this)">
                                 </div>
-                                <div id="avPresenterNameWrap" style="display:none;margin-top:10px;">
+                                <div id="avPresenterNameWrap" style="display:block;margin-top:12px;">
+                                    <label style="display:block;font-size:12px;color:#94a3b8;margin-bottom:5px;">👤 Presenter Name <span style="color:#64748b;">(optional — shown below your avatar)</span></label>
                                     <input type="text" id="avPresenterName" name="presenter_name"
-                                           placeholder="Your name (shown in the video side panel)"
+                                           placeholder="e.g. Dr. Ahmed Al-Rashid"
                                            style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#e2e8f0;font-size:13px;outline:none;">
                                 </div>
                                 <div id="avAvatarVideoStatus" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+                                <button type="button" id="avAvatarRemoveBtn" onclick="avRemoveAvatar()" style="display:none;margin-top:6px;padding:4px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;width:100%;">× Remove avatar</button>
                             </div>
                             <input type="hidden" id="avCustomAvatarId" name="custom_avatar_id" value="">
                         </div>
@@ -991,13 +1058,126 @@
             el.classList.add('selected');
             const avatarVal = el.getAttribute('data-avatar');
             document.getElementById(hiddenInputId).value = avatarVal;
-            // In Video Presenter tab: toggle voice clone + custom avatar cards
+            // Toggle voice clone + custom avatar cards based on avatar selection
             if (hiddenInputId === 'avAvatarChoice') {
                 const noAvatar = avatarVal === '';
                 const voiceCard  = document.getElementById('avVoiceCloneCard');
                 const avatarCard = document.getElementById('avCustomAvatarCard');
                 if (voiceCard)  voiceCard.style.display  = noAvatar ? 'block' : 'none';
                 if (avatarCard) avatarCard.style.display = noAvatar ? 'block' : 'none';
+            }
+            if (hiddenInputId === 'avatarChoiceMain') {
+                const noAvatar = avatarVal === '';
+                const voiceCard  = document.getElementById('pptxVoiceCloneCard');
+                const avatarCard = document.getElementById('pptxCustomAvatarCard');
+                if (voiceCard)  voiceCard.style.display  = noAvatar ? 'block' : 'none';
+                if (avatarCard) avatarCard.style.display = noAvatar ? 'block' : 'none';
+            }
+        }
+
+        async function pptxOnVoiceSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const statusEl  = document.getElementById('pptxVoiceStatus');
+            const iconEl    = document.getElementById('pptxVoiceIcon');
+            const textEl    = document.getElementById('pptxVoiceText');
+            const voiceIdEl = document.getElementById('pptxVoiceId');
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#1e293b';
+            statusEl.style.color = '#94a3b8';
+            statusEl.textContent = '⏳ Uploading voice sample...';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const resp = await fetch(`${APP_PREFIX}/api/clone-voice`, { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    statusEl.style.background = '#450a0a'; statusEl.style.color = '#fca5a5';
+                    statusEl.textContent = '❌ ' + (data.error || 'Upload failed');
+                    voiceIdEl.value = ''; return;
+                }
+                voiceIdEl.value = data.voice_id;
+                try { localStorage.setItem('pptxVoiceState', JSON.stringify({ voice_id: data.voice_id, filename: file.name })); } catch(e) {}
+                iconEl.textContent = '✅';
+                textEl.innerHTML = `<strong style="color:#4ade80;">${file.name}</strong> ready — your voice will be cloned`;
+                statusEl.style.background = '#052e16'; statusEl.style.color = '#4ade80';
+                statusEl.textContent = '✅ Voice sample uploaded successfully';
+                const pptxVoiceRmBtn = document.getElementById('pptxVoiceRemoveBtn'); if (pptxVoiceRmBtn) pptxVoiceRmBtn.style.display = 'block';
+                const vBody = document.getElementById('pptxVoiceBody');
+                const vChev = document.getElementById('pptxVoiceChevron');
+                if (vBody && !vBody.classList.contains('open')) { vBody.classList.add('open'); if (vChev) vChev.classList.add('open'); }
+            } catch (err) {
+                statusEl.style.background = '#450a0a'; statusEl.style.color = '#fca5a5';
+                statusEl.textContent = '❌ Error: ' + err.message;
+                voiceIdEl.value = '';
+            }
+        }
+
+        function pptxRemoveVoice() {
+            document.getElementById('pptxVoiceId').value = '';
+            document.getElementById('pptxVoiceIcon').textContent = '🎙️';
+            document.getElementById('pptxVoiceText').innerHTML = 'Drop WAV or MP3 here, or click to browse<br><span style="font-size:11px;color:#94a3b8;">6–30 seconds · quiet room · no background noise</span>';
+            const st = document.getElementById('pptxVoiceStatus'); st.style.display = 'none'; st.textContent = '';
+            document.getElementById('pptxVoiceRemoveBtn').style.display = 'none';
+            document.getElementById('pptxVoiceInput').value = '';
+            try { localStorage.removeItem('pptxVoiceState'); } catch(e) {}
+        }
+
+        function pptxRemoveAvatar() {
+            document.getElementById('pptxCustomAvatarId').value = '';
+            document.getElementById('pptxAvatarVideoIcon').textContent = '🎭';
+            document.getElementById('pptxAvatarVideoText').innerHTML = 'Drop MP4 here, or click to browse<br><span style="font-size:11px;color:#94a3b8;">6–10 seconds · white background · head &amp; shoulders visible</span>';
+            const st = document.getElementById('pptxAvatarVideoStatus'); st.style.display = 'none'; st.textContent = '';
+            document.getElementById('pptxAvatarRemoveBtn').style.display = 'none';
+            document.getElementById('pptxAvatarVideoInput').value = '';
+            try { localStorage.removeItem('pptxAvatarState'); } catch(e) {}
+        }
+
+        async function pptxOnAvatarVideoSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const statusEl = document.getElementById('pptxAvatarVideoStatus');
+            const iconEl   = document.getElementById('pptxAvatarVideoIcon');
+            const textEl   = document.getElementById('pptxAvatarVideoText');
+            const idEl     = document.getElementById('pptxCustomAvatarId');
+            const nameWrap = document.getElementById('pptxPresenterNameWrap');
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#1e293b';
+            statusEl.style.color = '#94a3b8';
+            statusEl.textContent = '⏳ Uploading avatar video...';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const resp = await fetch(`${APP_PREFIX}/api/upload-avatar`, { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    statusEl.style.background = '#450a0a'; statusEl.style.color = '#fca5a5';
+                    statusEl.textContent = '❌ ' + (data.error || 'Upload failed');
+                    idEl.value = ''; return;
+                }
+                idEl.value = data.avatar_id;
+                try { localStorage.setItem('pptxAvatarState', JSON.stringify({ avatar_id: data.avatar_id, filename: file.name })); } catch(e) {}
+                iconEl.textContent = '✅';
+                textEl.innerHTML = `<strong style="color:#38bdf8;">${file.name}</strong> — your avatar is ready`;
+                statusEl.style.background = '#082f49'; statusEl.style.color = '#38bdf8';
+                statusEl.textContent = '✅ Avatar uploaded — will be used as presenter in the video';
+                const pptxAvatarRmBtn = document.getElementById('pptxAvatarRemoveBtn'); if (pptxAvatarRmBtn) pptxAvatarRmBtn.style.display = 'block';
+                const aBody = document.getElementById('pptxAvatarBody');
+                const aChev = document.getElementById('pptxAvatarChevron');
+                if (aBody && !aBody.classList.contains('open')) { aBody.classList.add('open'); if (aChev) aChev.classList.add('open'); }
+                // Deselect any Hikma avatar
+                document.querySelectorAll('#avatarGalleryMain .hikma-avatar-option').forEach(el => el.classList.remove('selected'));
+                const noAvatarOpt = document.querySelector('#avatarGalleryMain .hikma-avatar-option[data-avatar=""]');
+                if (noAvatarOpt) noAvatarOpt.classList.add('selected');
+                const avChoiceInput = document.getElementById('avatarChoiceMain');
+                if (avChoiceInput) avChoiceInput.value = '';
+                // Ensure voice card stays visible
+                const voiceCard = document.getElementById('pptxVoiceCloneCard');
+                if (voiceCard) voiceCard.style.display = 'block';
+            } catch (err) {
+                statusEl.style.background = '#450a0a'; statusEl.style.color = '#fca5a5';
+                statusEl.textContent = '❌ Error: ' + err.message;
+                idEl.value = '';
             }
         }
     </script>

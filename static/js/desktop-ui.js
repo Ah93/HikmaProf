@@ -459,7 +459,7 @@ class DesktopUI {
                 </div>
                 <div class="progress-modal-footer" id="progressModalFooter" style="display: none;">
                     <a href="#" id="downloadLink" class="btn-primary" style="display: none;">📥 Download PPTX</a>
-                    <a href="#" id="videoLink" class="btn-secondary" style="display: none;">🎥 Download Video</a>
+                    <a href="#" id="videoLink" class="btn-secondary" style="display: none;">🎥 Download My Presenter Video</a>
                     <button onclick="desktopUI.closeProgressModal()" class="btn-secondary">Close</button>
                 </div>
             </div>
@@ -599,7 +599,7 @@ class DesktopUI {
 
     async pollJobStatus(jobId, button) {
         let attempts = 0;
-        const maxAttempts = 600; // 10 minutes max
+        const maxAttempts = 10800; // 3 hours max
         let lastSignature = '';
 
         const poll = async () => {
@@ -2476,6 +2476,7 @@ class DesktopUI {
         const footer = document.getElementById('progressModalFooter');
         footer.style.display = 'flex';
 
+        const noAvatar = !job.avatar_choice;
         let html = '';
         if (job.download_url) {
             html += `<a href="${job.download_url}" class="btn-primary" download>📥 Download PPTX</a>`;
@@ -2483,8 +2484,8 @@ class DesktopUI {
             html += `<a href="${APP_PREFIX}/api/job/${job.job_id}/transcript" class="btn-secondary" download>📝 Download Transcript</a>`;
             html += `<button onclick="desktopUI.downloadVideoPresentation('${job.job_id}', this)" class="btn-secondary">🎬 Download Video Presentation</button>`;
         }
-        if (job.video_url) {
-            html += `<a href="${job.video_url}" class="btn-secondary" download>🎥 Download Video</a>`;
+        if (noAvatar && job.video_url) {
+            html += `<a href="${job.video_url}" class="btn-secondary" download>🎥 Download My Presenter Video</a>`;
         }
 
         // Assessment divider + button
@@ -2807,6 +2808,7 @@ class DesktopUI {
         const color = job.color_scheme || 'blue';
         const createdAt = job.created_at ? new Date(job.created_at).toLocaleString() : '';
 
+        const noAvatarJob = !job.avatar_choice;
         let actionsHtml = '';
         if (job.status === 'completed') {
             if (job.download_url) {
@@ -2815,8 +2817,8 @@ class DesktopUI {
                 actionsHtml += `<a href="${APP_PREFIX}/api/job/${job.job_id}/transcript" class="btn-secondary" download>📝 Transcript</a>`;
                 actionsHtml += `<button onclick="desktopUI.downloadVideoPresentation('${job.job_id}', this)" class="btn-secondary">🎬 Download Video Presentation</button>`;
             }
-            if (job.video_url) {
-                actionsHtml += `<a href="${job.video_url}" class="btn-secondary" download>🎥 Download Video</a>`;
+            if (noAvatarJob && job.video_url) {
+                actionsHtml += `<a href="${job.video_url}" class="btn-secondary" download>🎥 Download My Presenter Video</a>`;
             }
         } else if (job.status === 'awaiting_approval') {
             actionsHtml = `
@@ -3358,10 +3360,18 @@ class DesktopUI {
 
 // Initialize when DOM is ready
 let desktopUI;
+function restoreUploadStates() {
+    try { localStorage.removeItem('avVoiceState'); } catch(e) {}
+    try { localStorage.removeItem('avAvatarState'); } catch(e) {}
+    try { localStorage.removeItem('pptxVoiceState'); } catch(e) {}
+    try { localStorage.removeItem('pptxAvatarState'); } catch(e) {}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     desktopUI = new DesktopUI();
     window.desktopUI = desktopUI; // Make it globally accessible
     setupAvatarVideoTab();
+    restoreUploadStates();
 });
 
 // ── Avatar Video Tab ──────────────────────────────────────────────────────────
@@ -3453,6 +3463,26 @@ function avToggleCollapse(bodyId, chevronId) {
     if (chevron) chevron.classList.toggle('open', open);
 }
 
+function avRemoveVoice() {
+    document.getElementById('avVoiceId').value = '';
+    document.getElementById('avVoiceIcon').textContent = '🎙️';
+    document.getElementById('avVoiceText').innerHTML = 'Drop WAV or MP3 here, or click to browse<br><span style="font-size:11px;color:#94a3b8;">6–30 seconds · quiet room · no background noise</span>';
+    const st = document.getElementById('avVoiceStatus'); st.style.display = 'none'; st.textContent = '';
+    document.getElementById('avVoiceRemoveBtn').style.display = 'none';
+    document.getElementById('avVoiceInput').value = '';
+    try { localStorage.removeItem('avVoiceState'); } catch(e) {}
+}
+
+function avRemoveAvatar() {
+    document.getElementById('avCustomAvatarId').value = '';
+    document.getElementById('avAvatarVideoIcon').textContent = '🎭';
+    document.getElementById('avAvatarVideoText').innerHTML = 'Drop MP4 here, or click to browse<br><span style="font-size:11px;color:#94a3b8;">6–10 seconds · white background · head &amp; shoulders visible</span>';
+    const st = document.getElementById('avAvatarVideoStatus'); st.style.display = 'none'; st.textContent = '';
+    document.getElementById('avAvatarRemoveBtn').style.display = 'none';
+    document.getElementById('avAvatarVideoInput').value = '';
+    try { localStorage.removeItem('avAvatarState'); } catch(e) {}
+}
+
 async function avOnVoiceSelect(input) {
     const file = input.files[0];
     if (!file) return;
@@ -3483,11 +3513,13 @@ async function avOnVoiceSelect(input) {
         }
 
         voiceIdEl.value = data.voice_id;
+        try { localStorage.setItem('avVoiceState', JSON.stringify({ voice_id: data.voice_id, filename: file.name })); } catch(e) {}
         iconEl.textContent = '✅';
         textEl.innerHTML = `<strong style="color:#4ade80;">${file.name}</strong> ready — your voice will be cloned`;
         statusEl.style.background = '#052e16';
         statusEl.style.color = '#4ade80';
         statusEl.textContent = '✅ Voice sample uploaded successfully';
+        const avVoiceRmBtn = document.getElementById('avVoiceRemoveBtn'); if (avVoiceRmBtn) avVoiceRmBtn.style.display = 'block';
         // Keep expanded so user sees the success state
         const vBody = document.getElementById('avVoiceBody');
         const vChev = document.getElementById('avVoiceChevron');
@@ -3531,13 +3563,14 @@ async function avOnAvatarVideoSelect(input) {
         }
 
         idEl.value = data.avatar_id;
+        try { localStorage.setItem('avAvatarState', JSON.stringify({ avatar_id: data.avatar_id, filename: file.name })); } catch(e) {}
         iconEl.textContent = '✅';
         textEl.innerHTML = `<strong style="color:#38bdf8;">${file.name}</strong> — your avatar is ready`;
         statusEl.style.background = '#082f49';
         statusEl.style.color = '#38bdf8';
         statusEl.textContent = '✅ Avatar uploaded — will be used as presenter in the video';
-        nameWrap.style.display = 'block';
-        // Keep expanded so user sees the success state and name field
+        const avAvatarRmBtn = document.getElementById('avAvatarRemoveBtn'); if (avAvatarRmBtn) avAvatarRmBtn.style.display = 'block';
+        // Keep expanded so user sees the success state
         const aBody = document.getElementById('avAvatarBody');
         const aChev = document.getElementById('avAvatarChevron');
         if (aBody && !aBody.classList.contains('open')) { aBody.classList.add('open'); if (aChev) aChev.classList.add('open'); }

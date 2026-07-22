@@ -53,14 +53,18 @@ class TemplateGallery {
         if (pptxPane)   pptxPane.style.display   = tab === 'pptx'   ? '' : 'none';
         if (imagesPane) imagesPane.style.display  = tab === 'images' ? '' : 'none';
 
-        // Hide avatar, slide layout, and main generate button when on AI Images tab
+        // Hide avatar, voice clone, personal avatar, slide layout, and main generate button when on AI Images tab
         const isImages = tab === 'images';
-        const avatarSection  = document.getElementById('pptx-avatar-section');
-        const layoutSection  = document.getElementById('pptx-layout-section');
-        const generateBtn    = document.getElementById('pptx-generate-btn');
-        if (avatarSection)  avatarSection.style.display  = isImages ? 'none' : '';
-        if (layoutSection)  layoutSection.style.display  = isImages ? 'none' : '';
-        if (generateBtn)    generateBtn.style.display     = isImages ? 'none' : '';
+        const avatarSection      = document.getElementById('pptx-avatar-section');
+        const voiceCloneCard     = document.getElementById('pptxVoiceCloneCard');
+        const customAvatarCard   = document.getElementById('pptxCustomAvatarCard');
+        const layoutSection      = document.getElementById('pptx-layout-section');
+        const generateBtn        = document.getElementById('pptx-generate-btn');
+        if (avatarSection)    avatarSection.style.display    = isImages ? 'none' : '';
+        if (voiceCloneCard)   voiceCloneCard.style.display   = isImages ? 'none' : '';
+        if (customAvatarCard) customAvatarCard.style.display = isImages ? 'none' : '';
+        if (layoutSection)    layoutSection.style.display    = isImages ? 'none' : '';
+        if (generateBtn)      generateBtn.style.display      = isImages ? 'none' : '';
 
         this._syncPresentationType();
         this.updateSelectedDisplay();

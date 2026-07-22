@@ -6,7 +6,7 @@ Run with: xtts_venv\Scripts\python xtts_server.py
 Endpoints:
   GET  /health                   — server + model status
   POST /clone                    — upload WAV sample, returns voice_id
-  POST /synthesize               — {voice_id, text, language} → WAV audio
+  POST /synthesize               — {voice_id, text, language} -> WAV audio
   GET  /voices                   — list saved voice samples
   DELETE /voice/<voice_id>       — delete a voice sample
 """
@@ -14,8 +14,10 @@ Endpoints:
 import gc
 import logging
 import os
+import re
 import subprocess
 import sys
+import threading
 import uuid
 
 import torch
@@ -121,6 +123,37 @@ def clone_voice():
     return jsonify({'voice_id': voice_id, 'filename': f.filename}), 201
 
 
+def _sanitize_text(text: str) -> str:
+    """Remove characters that can trigger CUDA device-side asserts in XTTS."""
+    # Keep only characters in the Basic Multilingual Plane (U+0000–U+FFFD)
+    # and discard surrogates, specials, and emoji above U+FFFF
+    text = ''.join(c for c in text if ord(c) < 0xFFFE and (c.isprintable() or c in '\n\t'))
+    # Remove ASCII control characters except tab and newline
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    # Collapse excessive whitespace
+    text = re.sub(r'[ \t]+', ' ', text).strip()
+    return text
+
+
+def _reload_model():
+    """Reload XTTS model to recover from a corrupted CUDA context."""
+    global tts_model
+    log.warning('Reloading XTTS model to recover from CUDA error...')
+    try:
+        del tts_model
+        tts_model = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+    except Exception:
+        pass
+    try:
+        load_model()
+        log.info('Model reloaded successfully.')
+    except Exception as e:
+        log.error(f'Model reload failed: {e}')
+
+
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
     """Synthesize speech with a cloned voice. Returns WAV audio file."""
@@ -137,6 +170,10 @@ def synthesize():
         return jsonify({'error': 'voice_id is required'}), 400
     if not text:
         return jsonify({'error': 'text is required'}), 400
+
+    text = _sanitize_text(text)
+    if not text:
+        return jsonify({'error': 'Text is empty after sanitization'}), 400
 
     # Find the sample file (any extension)
     sample_path = None
@@ -163,9 +200,16 @@ def synthesize():
             file_path=out_path,
             speed=speed,
         )
-        log.info(f'Done → {out_path}')
+        log.info(f'Done -> {out_path}')
         return send_file(out_path, mimetype='audio/wav', as_attachment=False)
 
+    except RuntimeError as e:
+        if 'CUDA' in str(e):
+            log.error(f'CUDA error during synthesis — triggering model reload: {e}')
+            threading.Thread(target=_reload_model, daemon=True).start()
+            return jsonify({'error': 'CUDA error — model is reloading, please retry in 30 seconds'}), 503
+        log.exception(f'Synthesis failed: {e}')
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
         log.exception(f'Synthesis failed: {e}')
         return jsonify({'error': str(e)}), 500
