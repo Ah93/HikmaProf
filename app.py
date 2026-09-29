@@ -27,7 +27,7 @@ load_dotenv()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'ppt_to_video'))
 from utils.pdf_converter import convert_pdf_to_images
 from utils.tts_engine import generate_speech
-from utils.video_composer import compose_video, compose_slide_video, concatenate_videos
+from utils.video_composer import compose_video, compose_slide_video, concatenate_videos, _AVATAR_DISPLAY_NAMES
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -259,6 +259,10 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
             _effective_voice = _EDGE_TTS_VOICES.get(_job_language, 'en-US-JennyNeural')
         print(f'[VIDEO GEN] avatar={repr(avatar_choice)} gender={_av_gender} voice={_effective_voice} lang={_job_language}')
 
+        # Strip slide 1 opening greeting when a welcome clip will be prepended
+        if (avatar_choice or custom_avatar_id) and transcript:
+            transcript[0] = _strip_opening_greeting(transcript[0])
+
         # Generate audio files
         audio_files = []
         num_slides = len(transcript)
@@ -331,6 +335,25 @@ def generate_video_from_pptx(job_id, pptx_path, transcript_path, output_name, av
 
         import time
         slide_videos = []
+
+        # ── Welcome intro clip (prepended before slide 1) ──────────────────────
+        if hikma_avatar_video and slide_images:
+            try:
+                _av_key = os.path.splitext(os.path.basename(hikma_avatar_video))[0]
+                _welcome_name = presenter_name if presenter_name else _AVATAR_DISPLAY_NAMES.get(_av_key, 'Presenter')
+                _greeting = _WELCOME_GREETING.get(_job_language, _WELCOME_GREETING['en']).format(name=_welcome_name)
+                _welcome_audio = os.path.join(audio_folder, 'slide_welcome.mp3')
+                _welcome_video = os.path.join(avatar_video_folder, 'slide_welcome.mp4')
+                generate_speech(_greeting, _welcome_audio, language=_job_language, speaker_idx=_effective_voice)
+                compose_slide_video(slide_images[0], _welcome_audio, _welcome_video,
+                                    avatar_video=hikma_avatar_video,
+                                    avatar_position=avatar_position,
+                                    presenter_name=presenter_name)
+                slide_videos.append(_welcome_video)
+                print(f'[VIDEO GEN] Welcome clip added for: {_welcome_name}')
+            except Exception as _we:
+                print(f'[VIDEO GEN] Welcome clip skipped: {_we}')
+
         num_slides = len(slide_images)
         for idx, (slide_img, audio_file) in enumerate(zip(slide_images, audio_files)):
             print(f"[VIDEO GEN] Composing slide {idx+1}/{num_slides}...")
@@ -2667,6 +2690,34 @@ TEMPLATE_DEFAULT_COLORS = {
     'split-bold':     'indigo',
 }
 
+def _strip_opening_greeting(text):
+    """Remove the first sentence if it is a generic greeting, to avoid doubling with the welcome clip."""
+    import re as _re
+    pattern = _re.compile(
+        r'^(?:hi|hello|good\s+(?:morning|afternoon|evening)|welcome|greetings|'
+        r'dear\s+(?:everyone|all)|مرحب[^\s]*|السلام|أهلاً|bonjour|bonsoir|'
+        r'hola|hallo|大家好|привет)[^.!?؟]*[.!?؟]\s*',
+        _re.IGNORECASE
+    )
+    stripped = pattern.sub('', text, count=1).strip()
+    return stripped if stripped else text
+
+
+# Welcome greeting per language (name placeholder = {name})
+_WELCOME_GREETING = {
+    'en': "Hi, my name is {name}.",
+    'ar': "مرحباً، اسمي {name}.",
+    'fr': "Bonjour, je m'appelle {name}.",
+    'de': "Hallo, mein Name ist {name}.",
+    'es': "Hola, mi nombre es {name}.",
+    'zh': "大家好，我叫{name}。",
+    'tr': "Merhaba, benim adım {name}.",
+    'ur': "السلام علیکم، میرا نام {name} ہے۔",
+    'it': "Salve, mi chiamo {name}.",
+    'pt': "Olá, meu nome é {name}.",
+    'ru': "Привет, меня зовут {name}.",
+}
+
 # Avatar character → gender mapping
 _AVATAR_GENDER = {
     'Professional Female':  'female',
@@ -2954,6 +3005,10 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
         slide_texts = _make_presenter_script(slide_texts, language)
         print(f'[VOICE VIDEO] Parsed {len(slide_texts)} transcript blocks')
 
+        # Strip slide 1 opening greeting when a welcome clip will be prepended
+        if hikma_avatar_video and slide_texts:
+            slide_texts[0] = _strip_opening_greeting(slide_texts[0])
+
         # ── Step 4: TTS audio per slide ───────────────────────────────────────
         audio_files = []
         for i, text in enumerate(slide_texts):
@@ -2965,6 +3020,24 @@ def _generate_voice_video_background(job_id, job_dir, pptx_path, transcript_path
 
         # ── Step 5: Compose one video clip per slide ──────────────────────────
         clip_files = []
+
+        # ── Welcome intro clip (prepended before slide 1) ─────────────────────
+        if hikma_avatar_video and slide_images:
+            try:
+                _av_key = os.path.splitext(os.path.basename(hikma_avatar_video))[0]
+                _welcome_name = presenter_name if presenter_name else _AVATAR_DISPLAY_NAMES.get(_av_key, 'Presenter')
+                _greeting = _WELCOME_GREETING.get(language, _WELCOME_GREETING['en']).format(name=_welcome_name)
+                _welcome_audio = os.path.join(work_dir, 'clip_welcome.mp3')
+                _welcome_video = os.path.join(work_dir, 'clip_welcome.mp4')
+                _tts_audio(_greeting, _welcome_audio, language=language, avatar_choice=avatar_choice, tts_voice=tts_voice, voice_id=voice_id)
+                compose_slide_video(slide_images[0], _welcome_audio, _welcome_video,
+                                    avatar_video=hikma_avatar_video,
+                                    presenter_name=presenter_name)
+                clip_files.append(_welcome_video)
+                print(f'[VOICE VIDEO] Welcome clip added for: {_welcome_name}')
+            except Exception as _we:
+                print(f'[VOICE VIDEO] Welcome clip skipped: {_we}')
+
         for i, (img, audio) in enumerate(zip(slide_images, audio_files)):
             _update_voice_job(job_id, 'composing_video', 65 + int((i / n_slides) * 25))
             print(f'[VOICE VIDEO] Composing clip {i + 1}/{n_slides}…')
@@ -3021,11 +3094,14 @@ def start_voice_video(job_id):
     transcript_files = sorted(f for f in os.listdir(job_dir) if f.endswith('_transcript.txt'))
     transcript_path = os.path.join(job_dir, transcript_files[0]) if transcript_files else None
 
-    # Get language and avatar_choice from in-memory job record, fall back to disk
+    # Get all job params from in-memory record, fall back to disk meta
     with job_lock:
         job_mem = jobs.get(job_id, {})
-        job_language = job_mem.get('language', None)
-        job_avatar = job_mem.get('avatar_choice', None)
+        job_language      = job_mem.get('language', None)
+        job_avatar        = job_mem.get('avatar_choice', None)
+        job_voice_id      = job_mem.get('voice_id', '')
+        job_custom_av_id  = job_mem.get('custom_avatar_id', None)
+        job_presenter     = job_mem.get('presenter_name', '')
 
     if not job_language or job_avatar is None:
         meta_path = os.path.join(job_dir, 'job_meta.json')
@@ -3036,16 +3112,32 @@ def start_voice_video(job_id):
                 job_language = meta.get('language', 'en')
             if job_avatar is None:
                 job_avatar = meta.get('avatar_choice', '')
+            if not job_voice_id:
+                job_voice_id = meta.get('voice_id', '')
+            if not job_custom_av_id:
+                job_custom_av_id = meta.get('custom_avatar_id', None)
+            if not job_presenter:
+                job_presenter = meta.get('presenter_name', '')
         else:
             job_language = job_language or 'en'
-            job_avatar = job_avatar or ''
+            job_avatar   = job_avatar or ''
 
-    print(f'[VOICE VIDEO] avatar_choice={repr(job_avatar)}  language={job_language}')
+    # Resolve custom avatar file path
+    job_custom_av_path = None
+    if job_custom_av_id:
+        _p = os.path.join(CUSTOM_AVATAR_DIR, f'{job_custom_av_id}.mp4')
+        if os.path.exists(_p):
+            job_custom_av_path = _p
+        else:
+            print(f'[VOICE VIDEO] Custom avatar not found: {_p}')
+
+    print(f'[VOICE VIDEO] avatar_choice={repr(job_avatar)}  language={job_language}  voice_id={bool(job_voice_id)}  custom_avatar={bool(job_custom_av_path)}')
 
     _update_voice_job(job_id, 'starting', 0)
     thread = threading.Thread(
         target=_generate_voice_video_background,
-        args=(job_id, job_dir, pptx_path, transcript_path, output_path, job_language, job_avatar),
+        args=(job_id, job_dir, pptx_path, transcript_path, output_path,
+              job_language, job_avatar, '', job_voice_id, job_custom_av_path, job_presenter),
         daemon=True
     )
     thread.start()
@@ -3790,6 +3882,628 @@ def request_entity_too_large(error):
         'max_size': f'{MAX_FILE_SIZE / 1024 / 1024}MB'
     }), 413
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PODCAST GENERATOR
+# ═══════════════════════════════════════════════════════════════════════════════
+
+podcast_jobs: dict = {}
+podcast_lock = threading.Lock()
+
+# 4 distinct Edge TTS voices per gender per language for multi-speaker assignment
+_PODCAST_VOICES = {
+    'en': {
+        'female': ['en-US-AriaNeural',  'en-US-JennyNeural', 'en-GB-SoniaNeural',   'en-AU-NatashaNeural'],
+        'male':   ['en-US-GuyNeural',   'en-GB-RyanNeural',  'en-US-DavisNeural',   'en-AU-WilliamNeural'],
+    },
+    'ar': {
+        'female': ['ar-SA-ZariyahNeural','ar-EG-SalmaNeural','ar-AE-FatimaNeural',  'ar-MA-MounaNeural'],
+        'male':   ['ar-SA-HamedNeural',  'ar-EG-ShakirNeural','ar-AE-HamdanNeural', 'ar-MA-JamalNeural'],
+    },
+    'fr': {
+        'female': ['fr-FR-DeniseNeural', 'fr-CA-SylvieNeural','fr-BE-CharlineNeural','fr-CH-ArianeNeural'],
+        'male':   ['fr-FR-HenriNeural',  'fr-CA-JeanNeural',  'fr-BE-GerardNeural', 'fr-CH-FabriceNeural'],
+    },
+    'de': {
+        'female': ['de-DE-KatjaNeural',  'de-AT-IngridNeural','de-CH-LeniNeural',   'de-DE-AmalaNeural'],
+        'male':   ['de-DE-ConradNeural', 'de-AT-JonasNeural', 'de-CH-JanNeural',    'de-DE-BerndNeural'],
+    },
+    'es': {
+        'female': ['es-ES-ElviraNeural', 'es-MX-DaliaNeural', 'es-AR-ElenaNeural',  'es-CO-SalomeNeural'],
+        'male':   ['es-ES-AlvaroNeural', 'es-MX-JorgeNeural', 'es-AR-TomasNeural',  'es-CO-GonzaloNeural'],
+    },
+    'zh': {
+        'female': ['zh-CN-XiaoxiaoNeural','zh-CN-XiaoyiNeural','zh-CN-XiaohanNeural','zh-TW-HsiaoChenNeural'],
+        'male':   ['zh-CN-YunxiNeural',  'zh-CN-YunjianNeural','zh-CN-YunfengNeural','zh-TW-YunJheNeural'],
+    },
+    'it': {
+        'female': ['it-IT-ElsaNeural',   'it-IT-IsabellaNeural','it-IT-FiammaNeural','it-IT-PalmiraNeural'],
+        'male':   ['it-IT-DiegoNeural',  'it-IT-BenignoNeural','it-IT-CalimeroNeural','it-IT-GianniNeural'],
+    },
+    'pt': {
+        'female': ['pt-BR-FranciscaNeural','pt-PT-RaquelNeural','pt-BR-ThalitaNeural','pt-PT-FernandaNeural'],
+        'male':   ['pt-BR-AntonioNeural','pt-PT-DuarteNeural','pt-BR-FabioNeural',  'pt-PT-RobertoNeural'],
+    },
+    'ru': {
+        'female': ['ru-RU-SvetlanaNeural','ru-RU-DariyaNeural','ru-RU-IrinaNeural', 'ru-RU-OlgaNeural'],
+        'male':   ['ru-RU-DmitryNeural', 'ru-RU-ErmolaNeural','ru-RU-PavelNeural',  'ru-RU-SergeiNeural'],
+    },
+    'tr': {
+        'female': ['tr-TR-EmelNeural',   'tr-TR-AyseNeural',  'tr-TR-CansuNeural',  'tr-TR-HilalNeural'],
+        'male':   ['tr-TR-AhmetNeural',  'tr-TR-BurakNeural', 'tr-TR-OrhanNeural',  'tr-TR-SerdarNeural'],
+    },
+    'ur': {
+        'female': ['ur-PK-UzmaNeural',   'ur-IN-GulNeural',   'ur-PK-UzmaNeural',   'ur-IN-GulNeural'],
+        'male':   ['ur-PK-AsadNeural',   'ur-IN-SalmanNeural','ur-PK-AsadNeural',   'ur-IN-SalmanNeural'],
+    },
+}
+# Per-speaker speaking rate variation so same-voice pairs sound distinct
+_PODCAST_RATES = ['-8%', '-2%', '+3%', '+8%']
+
+
+def _update_podcast_job(job_id, machine_status, progress=0, step='', error=''):
+    with podcast_lock:
+        podcast_jobs[job_id] = {
+            'status': machine_status,
+            'progress': progress,
+            'step': step,
+            'error': error,
+        }
+
+
+def _extract_doc_text(file_path):
+    """Extract plain text from PDF or DOCX."""
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == '.pdf':
+        import fitz
+        doc = fitz.open(file_path)
+        text = ''.join(page.get_text() for page in doc)
+        doc.close()
+        return text.strip()
+    if ext in ('.docx', '.doc'):
+        try:
+            import docx as _docx
+            d = _docx.Document(file_path)
+            return '\n'.join(p.text for p in d.paragraphs if p.text.strip())
+        except Exception:
+            return ''
+    return ''
+
+
+def _build_podcast_prompt(content_chunk, speakers, language, style,
+                           turns_target, segment_idx, total_segments, previous_tail=''):
+    lang_names = {
+        'en': 'English', 'ar': 'Arabic', 'fr': 'French', 'de': 'German',
+        'es': 'Spanish', 'zh': 'Chinese', 'it': 'Italian', 'pt': 'Portuguese',
+        'ru': 'Russian', 'tr': 'Turkish', 'ur': 'Urdu',
+    }
+    lang_name = lang_names.get(language, 'English')
+
+    host   = speakers[0]['name']
+    guests = [s['name'] for s in speakers[1:]]
+    guest_str = ', '.join(guests)
+
+    style_instructions = {
+        'casual': (
+            "Keep the tone warm, friendly and entertaining. Use everyday language and "
+            "natural reactions ('Oh interesting!', 'That actually surprised me...'). "
+            "Light humor is welcome."
+        ),
+        'academic': (
+            "Maintain an analytical, thorough tone. Guests elaborate on concepts in depth, "
+            "reference specific details from the document, and explore wider implications. "
+            "The host asks structured follow-up questions to go deeper."
+        ),
+        'debate': (
+            "Encourage respectful disagreement. Guests challenge each other's interpretations. "
+            "The host plays devil's advocate, pushes speakers to defend their views, "
+            "and synthesizes competing perspectives at the end of each topic."
+        ),
+    }.get(style, "Keep the conversation natural and engaging.")
+
+    is_first = segment_idx == 0
+    is_last  = segment_idx == total_segments - 1
+
+    if is_first:
+        opening_instruction = (
+            f"Open the podcast with {host} welcoming the listeners, naming the episode topic "
+            f"in one or two sentences, and briefly introducing the guest(s): {guest_str}. "
+            f"Then immediately launch into the first question."
+        )
+    else:
+        opening_instruction = (
+            f"Continue the podcast naturally — do NOT re-introduce anyone or re-open the episode. "
+            f"Start with {host} asking a new question on a new aspect of the topic.\n"
+            f"For continuity, the last exchanges were:\n{previous_tail}"
+        )
+
+    if is_last:
+        closing_instruction = (
+            f"End the podcast with {host} summarising the two or three most important takeaways "
+            f"from the whole conversation, then thanking the guest(s) and signing off warmly."
+        )
+    else:
+        closing_instruction = (
+            f"End this part mid-discussion — no goodbyes, no closings. "
+            f"The conversation will continue in the next segment."
+        )
+
+    multi_note = (
+        f"\nThis is part {segment_idx + 1} of {total_segments}. "
+        f"Cover roughly 1/{total_segments} of the document content in this part."
+        if total_segments > 1 else ""
+    )
+
+    guest_role = (
+        f"- {guest_str} are the GUESTS/EXPERTS. They answer the host's questions in depth, "
+        f"share insights, and may occasionally build on or respectfully challenge each other."
+        if len(guests) > 1 else
+        f"- {guest_str} is the GUEST/EXPERT. They answer the host's questions in depth "
+        f"and elaborate with concrete examples and detail."
+    )
+
+    return (
+        f"You are writing a podcast script in {lang_name}.\n\n"
+        f"ROLES:\n"
+        f"- {host} is the HOST/INTERVIEWER. They ask probing questions, react to answers "
+        f"  ('That's a great point — can you say more about…'), and keep the conversation moving.\n"
+        f"{guest_role}\n\n"
+        f"STYLE: {style_instructions}\n\n"
+        f"FORMAT RULES (follow exactly):\n"
+        f"- Write ONLY in {lang_name}.\n"
+        f"- Every turn: speaker name, colon, their words. One turn per line. Nothing else.\n"
+        f"  Correct example:  {host}: [host speaks here]\n"
+        f"- Host turns: 1-3 sentences (short questions and reactions).\n"
+        f"- Guest turns: 3-5 sentences (detailed, informative answers).\n"
+        f"- Speakers may address each other by name for a natural feel.\n"
+        f"- Do NOT use markdown, asterisks, headers, or any formatting symbols.\n"
+        f"- Write exactly {turns_target} turns total.{multi_note}\n\n"
+        f"OPENING: {opening_instruction}\n\n"
+        f"CLOSING: {closing_instruction}\n\n"
+        f"DOCUMENT CONTENT:\n---\n{content_chunk}\n---\n\n"
+        f"Write the podcast script now:"
+    )
+
+
+def _parse_podcast_script(script_text, speaker_names):
+    """Parse 'Name: text' lines into list of (name, text) tuples."""
+    import re as _re
+    turns = []
+    escaped = [_re.escape(n) for n in speaker_names]
+    pattern = _re.compile(
+        r'^(' + '|'.join(escaped) + r')\s*:\s*(.+)',
+        _re.IGNORECASE | _re.MULTILINE
+    )
+    for m in pattern.finditer(script_text):
+        name = m.group(1).strip()
+        text = m.group(2).strip()
+        # Normalize to original casing
+        for orig in speaker_names:
+            if orig.lower() == name.lower():
+                name = orig
+                break
+        if text:
+            turns.append((name, text))
+    return turns
+
+
+def _make_intro_jingle(work_dir):
+    """Ascending A-major arpeggio (~2 s) with a warm echo, generated via FFmpeg sine sources."""
+    out = os.path.join(work_dir, 'jingle_intro.mp3')
+    # Notes: A3 220 Hz → E4 330 → A4 440 → C#5 554 → E5 659, each starting 220 ms after the last
+    fc = (
+        '[0]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=0|0[n0];'
+        '[1]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=220|220[n1];'
+        '[2]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=440|440[n2];'
+        '[3]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=660|660[n3];'
+        '[4]afade=t=in:st=0:d=0.03,afade=t=out:st=1.30:d=0.20,'
+        'aformat=channel_layouts=stereo,adelay=880|880[n4];'
+        '[n0][n1][n2][n3][n4]amix=inputs=5:normalize=0:duration=longest,'
+        'aecho=0.7:0.4:80:0.35,volume=0.28[out]'
+    )
+    r = subprocess.run([
+        'ffmpeg', '-y',
+        '-f', 'lavfi', '-i', 'sine=frequency=220:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=554:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=659:sample_rate=44100:duration=1.50',
+        '-filter_complex', fc, '-map', '[out]',
+        '-c:a', 'libmp3lame', '-q:a', '2', out,
+    ], capture_output=True)
+    if r.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 0:
+        return out
+    print(f'[PODCAST] Intro jingle failed: {r.stderr[-300:]}')
+    return None
+
+
+def _make_outro_jingle(work_dir):
+    """Descending A-major arpeggio (~1.8 s) with a warm fade-to-silence, generated via FFmpeg."""
+    out = os.path.join(work_dir, 'jingle_outro.mp3')
+    # Notes: E5 659 Hz → C#5 554 → A4 440 → A3 220, last note held and faded out
+    fc = (
+        '[0]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=0|0[n0];'
+        '[1]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=220|220[n1];'
+        '[2]afade=t=in:st=0:d=0.03,afade=t=out:st=0.52:d=0.06,'
+        'aformat=channel_layouts=stereo,adelay=440|440[n2];'
+        '[3]afade=t=in:st=0:d=0.03,afade=t=out:st=1.15:d=0.40,'
+        'aformat=channel_layouts=stereo,adelay=660|660[n3];'
+        '[n0][n1][n2][n3]amix=inputs=4:normalize=0:duration=longest,'
+        'aecho=0.7:0.4:80:0.35,volume=0.28[out]'
+    )
+    r = subprocess.run([
+        'ffmpeg', '-y',
+        '-f', 'lavfi', '-i', 'sine=frequency=659:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=554:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=44100:duration=0.58',
+        '-f', 'lavfi', '-i', 'sine=frequency=220:sample_rate=44100:duration=1.50',
+        '-filter_complex', fc, '-map', '[out]',
+        '-c:a', 'libmp3lame', '-q:a', '2', out,
+    ], capture_output=True)
+    if r.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 0:
+        return out
+    print(f'[PODCAST] Outro jingle failed: {r.stderr[-300:]}')
+    return None
+
+
+def _generate_podcast_background(job_id, file_path, language, speakers, style,
+                                   duration_minutes, output_dir):
+    """Background thread: document → DeepSeek script (multi-segment) → Edge TTS → MP3."""
+    try:
+        # 1. Extract text
+        _update_podcast_job(job_id, 'running', 5, 'Extracting document content…')
+        print(f'[PODCAST] Extracting text from {file_path}')
+        content = _extract_doc_text(file_path)
+        if not content:
+            raise ValueError('Could not extract text from document')
+        print(f'[PODCAST] {len(content)} chars extracted')
+
+        # 2. Assign voices
+        _update_podcast_job(job_id, 'running', 10, 'Assigning voices…')
+        voice_pool = _PODCAST_VOICES.get(language, _PODCAST_VOICES['en'])
+        fi = mi = 0
+        speaker_voice: dict = {}
+        for idx, spk in enumerate(speakers):
+            rate = _PODCAST_RATES[idx % len(_PODCAST_RATES)]
+            gender = spk.get('gender', 'male')
+            if gender == 'female':
+                voice = voice_pool['female'][fi % len(voice_pool['female'])]
+                fi += 1
+            else:
+                voice = voice_pool['male'][mi % len(voice_pool['male'])]
+                mi += 1
+            speaker_voice[spk['name']] = (voice, rate)
+            print(f"[PODCAST] '{spk['name']}' → {voice}  rate={rate}")
+
+        # 3. Generate script — one DeepSeek call per 20-min segment
+        # 20 min ≈ 60 turns; 40 min = 2 × 60; 60 min = 3 × 60
+        num_segments   = max(1, duration_minutes // 20)
+        turns_per_seg  = 60
+        chars_per_seg  = 5000
+        speaker_names  = [s['name'] for s in speakers]
+        all_turns      = []
+        previous_tail  = ''
+
+        import requests as _req
+        deepseek_key = os.environ.get('DEEPSEEK_API_KEY', '')
+
+        for seg_idx in range(num_segments):
+            seg_label = (
+                f'Writing script (part {seg_idx + 1}/{num_segments})…'
+                if num_segments > 1 else 'Writing script…'
+            )
+            seg_pct = 12 + int((seg_idx / num_segments) * 28)
+            _update_podcast_job(job_id, 'running', seg_pct, seg_label)
+            print(f'[PODCAST] DeepSeek call {seg_idx + 1}/{num_segments}')
+
+            content_chunk = content[seg_idx * chars_per_seg: (seg_idx + 1) * chars_per_seg]
+
+            prompt = _build_podcast_prompt(
+                content_chunk, speakers, language, style,
+                turns_target=turns_per_seg,
+                segment_idx=seg_idx,
+                total_segments=num_segments,
+                previous_tail=previous_tail,
+            )
+
+            resp = _req.post(
+                'https://api.deepseek.com/v1/chat/completions',
+                headers={
+                    'Authorization': f'Bearer {deepseek_key}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'model': 'deepseek-chat',
+                    'messages': [{'role': 'user', 'content': prompt}],
+                    'max_tokens': 4096,
+                    'temperature': 0.82,
+                },
+                timeout=180,
+            )
+            resp.raise_for_status()
+            script_chunk = resp.json()['choices'][0]['message']['content']
+            print(f'[PODCAST] Segment {seg_idx + 1}: {len(script_chunk)} chars')
+
+            chunk_turns = _parse_podcast_script(script_chunk, speaker_names)
+            print(f'[PODCAST] Segment {seg_idx + 1}: {len(chunk_turns)} turns parsed')
+
+            if chunk_turns:
+                tail = chunk_turns[-5:]
+                previous_tail = '\n'.join(f"{n}: {t}" for n, t in tail)
+                all_turns.extend(chunk_turns)
+
+        if not all_turns:
+            raise ValueError('Script generation produced no speaker turns')
+
+        turns = all_turns
+        print(f'[PODCAST] Total turns: {len(turns)}')
+
+        # Save transcript before TTS so it survives even if audio assembly fails later
+        _update_podcast_job(job_id, 'running', 41, 'Saving transcript…')
+        transcript_path = os.path.join(output_dir, 'transcript.txt')
+        _lang_labels = {
+            'en': 'English', 'ar': 'Arabic', 'fr': 'French', 'de': 'German',
+            'es': 'Spanish', 'zh': 'Chinese', 'it': 'Italian', 'pt': 'Portuguese',
+            'ru': 'Russian', 'tr': 'Turkish', 'ur': 'Urdu',
+        }
+        try:
+            with open(transcript_path, 'w', encoding='utf-8') as _tf:
+                _tf.write('HikmaProf Podcast — Transcript\n')
+                _tf.write('=' * 50 + '\n')
+                _tf.write(f'Generated : {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}\n')
+                _tf.write(f'Language  : {_lang_labels.get(language, language.upper())}\n')
+                _tf.write(f'Style     : {style.capitalize()}\n')
+                _tf.write(f'Duration  : ~{duration_minutes} min\n')
+                _tf.write(f'Speakers  : {", ".join(s["name"] for s in speakers)}\n')
+                _tf.write('=' * 50 + '\n\n')
+                for _spk, _txt in turns:
+                    _tf.write(f'{_spk}: {_txt}\n\n')
+            print(f'[PODCAST] Transcript saved → {transcript_path}')
+        except Exception as _te:
+            print(f'[PODCAST] Transcript save failed (non-fatal): {_te}')
+
+        # 4. TTS per turn
+        work_dir = os.path.join(output_dir, 'tmp')
+        os.makedirs(work_dir, exist_ok=True)
+
+        import asyncio
+        import edge_tts as _edge
+
+        host_name = speakers[0]['name']
+
+        # Three natural pause lengths (seconds) depending on who speaks next:
+        # host → guest  : short  (guest eager to answer)
+        # guest → host  : long   (host absorbing, formulating next question)
+        # guest → guest : medium (natural handoff between co-guests)
+        _PAUSE_DURATIONS = {'short': 0.30, 'medium': 0.50, 'long': 0.70}
+        silence_clips: dict = {}
+        for label, dur in _PAUSE_DURATIONS.items():
+            path = os.path.join(work_dir, f'silence_{label}.mp3')
+            subprocess.run([
+                'ffmpeg', '-y', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
+                '-t', str(dur), '-c:a', 'libmp3lame', '-q:a', '2', path
+            ], capture_output=True)
+            silence_clips[label] = path
+
+        def _pick_pause(current_spk, next_spk):
+            """Choose pause clip based on speaker transition."""
+            if current_spk == host_name:
+                return silence_clips['short']
+            elif next_spk == host_name:
+                return silence_clips['long']
+            else:
+                return silence_clips['medium']
+
+        audio_clips = []
+        n = len(turns)
+        fallback_voice = voice_pool['male'][0]
+
+        for i, (spk_name, text) in enumerate(turns):
+            pct = 42 + int((i / n) * 46)
+            if i % 8 == 0:
+                _update_podcast_job(
+                    job_id, 'running', pct,
+                    f'Synthesising voices… ({i + 1}/{n} turns)'
+                )
+                print(f'[PODCAST] TTS {i + 1}/{n}: {spk_name}')
+
+            voice_name, rate = speaker_voice.get(spk_name, (fallback_voice, '+0%'))
+            raw_path   = os.path.join(work_dir, f'turn_{i:04d}_raw.mp3')
+            clip_path  = os.path.join(work_dir, f'turn_{i:04d}.mp3')
+
+            try:
+                clean = text.replace('&', 'and').replace('<', '').replace('>', '')
+
+                async def _synth(t=clean, v=voice_name, r=rate, p=raw_path):
+                    await _edge.Communicate(t, v, rate=r).save(p)
+
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(_synth())
+                finally:
+                    loop.close()
+
+                if not (os.path.exists(raw_path) and os.path.getsize(raw_path) > 0):
+                    continue
+
+                # Apply 60 ms fade-out so there are no hard cuts between speakers.
+                # areverse → afade-in → areverse = fade-out without needing clip duration.
+                fade_result = subprocess.run([
+                    'ffmpeg', '-y', '-i', raw_path,
+                    '-af', 'areverse,afade=t=in:st=0:d=0.06,areverse',
+                    clip_path,
+                ], capture_output=True)
+
+                final_clip = clip_path if (
+                    fade_result.returncode == 0
+                    and os.path.exists(clip_path)
+                    and os.path.getsize(clip_path) > 0
+                ) else raw_path
+
+                audio_clips.append(final_clip)
+
+                # Variable pause based on who speaks next
+                if i < n - 1:
+                    next_spk = turns[i + 1][0]
+                    audio_clips.append(_pick_pause(spk_name, next_spk))
+
+            except Exception as _e:
+                print(f'[PODCAST] TTS failed turn {i + 1}: {_e}')
+
+        if not audio_clips:
+            raise ValueError('No audio clips were generated')
+
+        # 5a. Bookend with intro / outro jingles (fail-safe — podcast works without them)
+        _update_podcast_job(job_id, 'running', 89, 'Adding intro/outro…')
+        intro_jingle = _make_intro_jingle(work_dir)
+        outro_jingle = _make_outro_jingle(work_dir)
+        if intro_jingle or outro_jingle:
+            bookended = []
+            if intro_jingle:
+                bookended.append(intro_jingle)
+                bookended.append(silence_clips['medium'])  # 500 ms breath before host speaks
+            bookended.extend(audio_clips)
+            if outro_jingle:
+                bookended.append(silence_clips['medium'])  # 500 ms after last word
+                bookended.append(outro_jingle)
+            audio_clips = bookended
+
+        # 5. Concatenate + EBU R128 loudness normalisation
+        _update_podcast_job(job_id, 'running', 90, 'Mixing and mastering audio…')
+        print(f'[PODCAST] Concatenating {len(audio_clips)} clips…')
+        concat_list = os.path.join(work_dir, 'concat.txt')
+        with open(concat_list, 'w', encoding='utf-8') as f:
+            for clip in audio_clips:
+                f.write(f"file '{os.path.abspath(clip)}'\n")
+
+        final_path = os.path.join(output_dir, 'podcast.mp3')
+        result = subprocess.run([
+            'ffmpeg', '-y',
+            '-f', 'concat', '-safe', '0', '-i', concat_list,
+            '-c:a', 'libmp3lame', '-q:a', '2',
+            '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11',
+            final_path,
+        ], capture_output=True, text=True, timeout=600)
+
+        if result.returncode != 0:
+            raise Exception(f'FFmpeg failed: {result.stderr[-500:]}')
+
+        print(f'[PODCAST] Done → {final_path}')
+        _update_podcast_job(job_id, 'done', 100, 'Podcast ready!')
+
+    except Exception as exc:
+        print(f'[PODCAST] ERROR: {exc}')
+        import traceback; traceback.print_exc()
+        _update_podcast_job(job_id, 'error', 0, '', str(exc))
+    finally:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception:
+            pass
+
+
+@app.route('/api/podcast/generate', methods=['POST'])
+def generate_podcast():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in ('.pdf', '.docx', '.doc'):
+        return jsonify({'error': 'Only PDF and DOCX supported'}), 400
+
+    language         = request.form.get('language', 'en')
+    num_speakers     = max(2, min(4, int(request.form.get('num_speakers', 2))))
+    style            = request.form.get('style', 'casual')
+    raw_dur          = int(request.form.get('duration', 20))
+    duration_minutes = raw_dur if raw_dur in (20, 40, 60) else 20
+
+    # Accept either a 'speakers' JSON array (from JS) or individual form fields (fallback)
+    speakers = []
+    speakers_json = request.form.get('speakers', '')
+    if speakers_json:
+        import json as _json
+        try:
+            raw = _json.loads(speakers_json)
+            for i, item in enumerate(raw[:4], start=1):
+                name   = (str(item.get('name', '') or f'Speaker {i}')).strip()
+                gender = str(item.get('gender', 'male')).strip().lower()
+                if gender not in ('male', 'female'):
+                    gender = 'male'
+                speakers.append({'name': name, 'gender': gender})
+        except Exception:
+            speakers = []
+    if not speakers:
+        for i in range(1, num_speakers + 1):
+            name   = (request.form.get(f'speaker_{i}_name', '') or f'Speaker {i}').strip()
+            gender = request.form.get(f'speaker_{i}_gender', 'male').strip().lower()
+            if gender not in ('male', 'female'):
+                gender = 'male'
+            speakers.append({'name': name, 'gender': gender})
+    if len(speakers) < 2:
+        return jsonify({'error': 'At least 2 speakers are required'}), 400
+
+    job_id     = str(uuid.uuid4())
+    output_dir = os.path.join(OUTPUT_FOLDER, 'podcasts', job_id)
+    os.makedirs(output_dir, exist_ok=True)
+
+    file_path = os.path.join(output_dir, f'source{ext}')
+    f.save(file_path)
+
+    _update_podcast_job(job_id, 'running', 0, 'Starting…')
+    threading.Thread(
+        target=_generate_podcast_background,
+        args=(job_id, file_path, language, speakers, style, duration_minutes, output_dir),
+        daemon=True
+    ).start()
+
+    return jsonify({'job_id': job_id}), 202
+
+
+@app.route('/api/podcast/<job_id>/status', methods=['GET'])
+def podcast_status(job_id):
+    job_dir = os.path.join(OUTPUT_FOLDER, 'podcasts', job_id)
+    if os.path.exists(os.path.join(job_dir, 'podcast.mp3')):
+        has_transcript = os.path.exists(os.path.join(job_dir, 'transcript.txt'))
+        return jsonify({
+            'status': 'done', 'progress': 100, 'step': 'Podcast ready!',
+            'has_transcript': has_transcript,
+        })
+    with podcast_lock:
+        info = podcast_jobs.get(
+            job_id,
+            {'status': 'not_started', 'progress': 0, 'step': 'Waiting…', 'error': ''}
+        )
+    return jsonify(info)
+
+
+@app.route('/api/podcast/<job_id>/download', methods=['GET'])
+def podcast_download(job_id):
+    path = os.path.join(OUTPUT_FOLDER, 'podcasts', job_id, 'podcast.mp3')
+    if not os.path.exists(path):
+        return jsonify({'error': 'Podcast not ready'}), 404
+    return send_file(path, as_attachment=True, mimetype='audio/mpeg',
+                     download_name=f'podcast-{job_id[:8]}.mp3')
+
+
+@app.route('/api/podcast/<job_id>/transcript', methods=['GET'])
+def podcast_transcript(job_id):
+    path = os.path.join(OUTPUT_FOLDER, 'podcasts', job_id, 'transcript.txt')
+    if not os.path.exists(path):
+        return jsonify({'error': 'Transcript not available'}), 404
+    return send_file(path, as_attachment=True, mimetype='text/plain; charset=utf-8',
+                     download_name=f'transcript-{job_id[:8]}.txt')
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
     import argparse

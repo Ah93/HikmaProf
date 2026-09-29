@@ -1,72 +1,46 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
+dist/
+build/
+.eggs/
 
-# Virtual Environment
+# Virtual environments
 venv/
 env/
-ENV/
-.venv
+xtts_venv/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Environment variables
-.env
-.env.local
-
-# Uploads and Outputs
-uploads/
-output/
-outputs/
-*.pptx
-*.mp4
-!static/avatar/**/*.mp4
-*.pdf
-*.docx
-*.tex
-
-# Logs
-*.log
-logs/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
+# Generated voice/media output (large, runtime-generated)
+voice_output/
+voice_samples/
 
 # OS
 .DS_Store
 Thumbs.db
 
+# IDE
+.vscode/
+.idea/
+
+# Environment variables
+.env
+*.env
+
 # Node
 node_modules/
 
-# Project specific
-temp/
-cache/
-slides_output/
-ernie_server.log
+# Generated output / uploads (runtime)
+output/
+uploads/
+doc/
+
+# Test video files at root
+/test_output*.mp4
+/3.pdf
+
+# Generated PDF graphs (PNGs already committed)
+graph*.pdf

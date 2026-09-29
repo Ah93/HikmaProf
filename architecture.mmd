@@ -1,0 +1,75 @@
+flowchart LR
+    subgraph S1["1. User Input"]
+        direction TB
+        A1[/"Upload PDF / DOCX / TEX"/]
+        A2["Flask Web Server\nTemplate, Color, Lang x11,\n#Slides, Avatar, #AI Images"]
+        A3{{"Spawns Background Thread"}}
+        A1 --> A2 --> A3
+    end
+
+    JID[("In-Memory Job Store\njobs{} dict + job_lock\n(NO database)")]
+    A3 -.-> JID
+
+    subgraph S2["2. File Processing"]
+        direction TB
+        B1["src/pipeline.ts\n(TypeScript via ts-node)"]
+        B2["Structured Document\n(document-content.json)"]
+        B3["Edit / Reorder\n(optional, awaiting_approval)"]
+        B4["Slide Plan Preview\n(optional)"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    JID --> S2
+
+    subgraph S3["3. Content & AI Processing"]
+        direction TB
+        C1["LLM Content Gen\nAI_PROVIDER = Claude / Gemini / DeepSeek"]
+        C2["Structured Slide Plan (JSON)"]
+        C3["PPTX Generation\n(python-pptx)"]
+        C4["Generated PPTX File (Ready)"]
+        C1 --> C2 --> C3 --> C4
+    end
+
+    S2 --> S3
+
+    subgraph S3B["3b. AI Slide Visuals (optional branch)"]
+        direction TB
+        D1["ERNIE-Image-Turbo Server\n(separate process, ngrok)"]
+        D2["Batch image gen\nernie_images/slide_N.png"]
+        D3["Magic Layout Editor\n(Fabric.js: cover/text/draw)"]
+        D4["Enhance\n(prompt-based regen,\nper-image or all)"]
+        D1 --> D2 --> D3
+        D3 --> D4 --> D2
+    end
+
+    C3 -. "if num_images > 0" .-> S3B
+    S3B -. "inject as slide backgrounds" .-> C4
+
+    subgraph S4["4. Runtime & Output"]
+        direction TB
+        E1["Web Server\nHost & Deliver"]
+        E2["Slide Rendering\n(ffmpeg → PNG)"]
+        E3["TTS\ngTTS / ElevenLabs"]
+        E4["Avatar Animation"]
+        E5["Presentation Video (.mp4)"]
+        E6["Assessment / Quiz\nGeneration"]
+        E1 --> E2
+        E2 --> E3 --> E4 --> E5
+        E1 --> E6
+    end
+
+    C4 --> S4
+
+    classDef input fill:#1d4ed8,stroke:#3b82f6,color:#fff
+    classDef files fill:#15803d,stroke:#22c55e,color:#fff
+    classDef content fill:#1d4ed8,stroke:#3b82f6,color:#fff
+    classDef visuals fill:#7c3aed,stroke:#a855f7,color:#fff
+    classDef output fill:#c2410c,stroke:#f97316,color:#fff
+    classDef store fill:#0f172a,stroke:#64748b,color:#fff,stroke-dasharray: 4 4
+
+    class A1,A2,A3 input
+    class B1,B2,B3,B4 files
+    class C1,C2,C3,C4 content
+    class D1,D2,D3,D4 visuals
+    class E1,E2,E3,E4,E5,E6 output
+    class JID store

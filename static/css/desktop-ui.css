@@ -839,3 +839,102 @@ body {
     text-align: center;
     line-height: 1.3;
 }
+
+/* ─── Podcast Generator ─────────────────────────────────────── */
+
+/* Speaker count toggles */
+.podcast-count-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.podcast-count-opt {
+    flex: 1;
+    padding: 8px 0;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.podcast-count-opt:hover {
+    border-color: #2AADA6;
+    color: #2AADA6;
+}
+.podcast-count-opt.selected {
+    border-color: #2AADA6;
+    background: #e6f8f7;
+    color: #1a8a83;
+}
+
+/* Speaker rows */
+.podcast-spk-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+.podcast-spk-badge {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 50%;
+    background: #2AADA6;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.podcast-spk-row input[type="text"] {
+    flex: 1;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 13px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 0;
+}
+.podcast-spk-row input[type="text"]:focus {
+    border-color: #2AADA6;
+}
+
+/* Gender toggle */
+.podcast-gender-group {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.podcast-gender-btn {
+    padding: 5px 11px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #fff;
+    color: #64748b;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+.podcast-gender-btn:hover {
+    border-color: #2AADA6;
+    color: #2AADA6;
+}
+.podcast-gender-btn.selected {
+    border-color: #2AADA6;
+    background: #e6f8f7;
+    color: #1a8a83;
+}
+

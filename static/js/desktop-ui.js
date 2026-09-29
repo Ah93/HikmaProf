@@ -63,6 +63,7 @@ class DesktopUI {
             'templates': ['Template Gallery', 'Browse and preview all templates'],
             'recent': ['Recent Jobs', 'View your presentation history'],
             'assessments': ['Assessments', 'Generate quizzes and flashcards from your presentations'],
+            'podcast':     ['Podcast Generator', 'Turn any document into a multi-speaker audio podcast'],
             'help': ['Help & Documentation', 'Learn how to use the platform']
         };
 
@@ -3686,6 +3687,169 @@ async function pollAvatarVideoStatus(jobId, startTime) {
             }
         } catch (err) {
             console.error('[AvatarVideo] Poll error:', err);
+        }
+    }
+}
+
+/* ─── Podcast Generator ─────────────────────────────────────── */
+
+function podcastOnFileSelect(input) {
+    if (!input.files || !input.files[0]) return;
+    const f = input.files[0];
+    const textEl = document.getElementById('podcastFileText');
+    const zone   = document.getElementById('podcastDropZone');
+    if (textEl) textEl.textContent = f.name;
+    if (zone)   zone.style.borderColor = '#2AADA6';
+}
+
+function podcastSetDuration(minutes, el) {
+    // toggle selected within the duration row only
+    const row = el ? el.closest('div') : null;
+    if (row) row.querySelectorAll('.podcast-count-opt').forEach(b => b.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+    const hidden = document.getElementById('podcastDuration');
+    if (hidden) hidden.value = minutes;
+}
+
+function podcastSetCount(n, el) {
+    // toggle selected within the speaker-count row only
+    const row = el ? el.closest('div') : null;
+    if (row) row.querySelectorAll('.podcast-count-opt').forEach(b => b.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+    // update hidden input
+    const hidden = document.getElementById('podcastNumSpeakers');
+    if (hidden) hidden.value = n;
+    // show/hide rows 3 and 4
+    for (let i = 3; i <= 4; i++) {
+        const row = document.getElementById(`podcastSpk${i}`);
+        if (row) row.style.display = i <= n ? 'flex' : 'none';
+    }
+}
+
+function podcastSetGender(speakerNum, gender, el) {
+    const group = el ? el.closest('.podcast-gender-group') : null;
+    if (group) group.querySelectorAll('.podcast-gender-btn').forEach(b => b.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+    // update hidden gender input
+    const hidden = document.getElementById(`podcastG${speakerNum}`);
+    if (hidden) hidden.value = gender;
+}
+
+async function podcastSubmit() {
+    const fileInput = document.getElementById('podcastFileInput');
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        alert('Please upload a PDF or DOCX file first.'); return;
+    }
+
+    // speaker count from hidden input
+    const numHidden = document.getElementById('podcastNumSpeakers');
+    const speakerCount = numHidden ? parseInt(numHidden.value) || 2 : 2;
+
+    // collect speakers
+    const speakers = [];
+    for (let i = 1; i <= speakerCount; i++) {
+        const row      = document.getElementById(`podcastSpk${i}`);
+        const nameInput = row ? row.querySelector('input[type="text"]') : null;
+        const name      = nameInput ? (nameInput.value.trim() || `Speaker ${i}`) : `Speaker ${i}`;
+        const gHidden   = document.getElementById(`podcastG${i}`);
+        const gender    = gHidden ? gHidden.value : (i % 2 === 0 ? 'female' : 'male');
+        speakers.push({ name, gender });
+    }
+
+    const langSel    = document.getElementById('podcastLanguage');
+    const styleSel   = document.querySelector('#podcastForm select[name="style"]');
+    const durHidden  = document.getElementById('podcastDuration');
+    const language   = langSel   ? langSel.value   : 'en';
+    const style      = styleSel  ? styleSel.value  : 'casual';
+    const duration   = durHidden ? parseInt(durHidden.value) || 20 : 20;
+
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    fd.append('language', language);
+    fd.append('style', style);
+    fd.append('duration', duration);
+    fd.append('speakers', JSON.stringify(speakers));
+
+    // UI: show progress, hide result
+    const btn            = document.getElementById('podcastGenerateBtn');
+    const progressEl     = document.getElementById('podcastProgress');
+    const resultEl       = document.getElementById('podcastResult');
+    const progressBar    = document.getElementById('podcastProgressBar');
+    const progressStatus = document.getElementById('podcastProgressStatus');
+    const progressPct    = document.getElementById('podcastProgressPct');
+
+    if (btn)          { btn.disabled = true; btn.textContent = '⏳ Generating…'; }
+    if (progressEl)   progressEl.style.display = 'block';
+    if (resultEl)     resultEl.style.display   = 'none';
+    if (progressBar)  { progressBar.style.transition = 'none'; progressBar.style.width = '0%'; }
+    if (progressStatus) progressStatus.textContent = 'Uploading document…';
+    if (progressPct)    progressPct.textContent     = '0%';
+
+    try {
+        const res = await fetch('/api/podcast/generate', { method: 'POST', body: fd });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${res.status}`);
+        }
+        const data = await res.json();
+        podcastPollStatus(data.job_id);
+    } catch (err) {
+        if (progressStatus) progressStatus.textContent = '❌ ' + err.message;
+        if (progressPct)    progressPct.textContent    = '';
+        if (btn) { btn.disabled = false; btn.textContent = '🎙️ Generate Podcast'; }
+    }
+}
+
+async function podcastPollStatus(jobId) {
+    const progressBar    = document.getElementById('podcastProgressBar');
+    const progressStatus = document.getElementById('podcastProgressStatus');
+    const progressPct    = document.getElementById('podcastProgressPct');
+    const resultEl       = document.getElementById('podcastResult');
+    const downloadBtn    = document.getElementById('podcastDownloadBtn');
+    const transcriptBtn  = document.getElementById('podcastTranscriptBtn');
+    const btn            = document.getElementById('podcastGenerateBtn');
+
+    let smoothPct = 0;
+
+    while (true) {
+        await new Promise(r => setTimeout(r, 2500));
+        try {
+            const res = await fetch(`/api/podcast/${jobId}/status`);
+            if (!res.ok) continue;
+            const data = await res.json();
+
+            const targetPct = data.progress || 0;
+            smoothPct = Math.max(smoothPct, targetPct);
+            if (progressBar) {
+                progressBar.style.transition = 'width 0.5s ease';
+                progressBar.style.width = smoothPct + '%';
+            }
+            if (progressStatus) progressStatus.textContent = data.step || 'Processing…';
+            if (progressPct)    progressPct.textContent    = Math.round(smoothPct) + '%';
+
+            if (data.status === 'done') {
+                if (progressBar)    progressBar.style.width = '100%';
+                if (progressStatus) progressStatus.textContent = '✅ Podcast ready!';
+                if (progressPct)    progressPct.textContent = '100%';
+                if (resultEl)       resultEl.style.display = 'block';
+                if (downloadBtn) {
+                    downloadBtn.onclick = () => { window.location.href = `/api/podcast/${jobId}/download`; };
+                }
+                if (transcriptBtn && data.has_transcript) {
+                    transcriptBtn.style.display = '';
+                    transcriptBtn.onclick = () => { window.location.href = `/api/podcast/${jobId}/transcript`; };
+                }
+                if (btn) { btn.disabled = false; btn.textContent = '🎙️ Generate Podcast'; }
+                break;
+            }
+            if (data.status === 'error') {
+                if (progressStatus) progressStatus.textContent = '❌ ' + (data.error || 'Generation failed');
+                if (progressPct)    progressPct.textContent = '';
+                if (btn) { btn.disabled = false; btn.textContent = '🎙️ Generate Podcast'; }
+                break;
+            }
+        } catch (err) {
+            console.error('[Podcast] Poll error:', err);
         }
     }
 }

@@ -43,6 +43,11 @@
                         <span class="nav-item-icon">🎬</span>
                         <span class="nav-item-text">Video Presenter</span>
                     </a>
+                    <a class="nav-item" data-panel="podcast">
+                        <span class="nav-item-icon">🎙️</span>
+                        <span class="nav-item-text">Podcast Generator</span>
+                        <span class="nav-item-badge">NEW</span>
+                    </a>
                 </div>
 
                 <div class="nav-section">
@@ -813,6 +818,182 @@
                             <button id="avDownloadBtn" class="btn-primary" style="background:linear-gradient(135deg,#059669,#10b981);">
                                 ⬇️ Download Video
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Podcast Generator Panel -->
+                <div class="panel-section" id="panel-podcast">
+                    <form id="podcastForm" enctype="multipart/form-data">
+
+                        <!-- File Upload -->
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">📄 Upload Document</h3>
+                                <p class="form-card-description">Upload a PDF or DOCX — AI will turn it into a multi-speaker podcast</p>
+                            </div>
+                            <div class="file-upload-area" id="podcastDropZone"
+                                 onclick="document.getElementById('podcastFileInput').click()"
+                                 style="cursor:pointer;">
+                                <div class="file-upload-icon" id="podcastFileIcon">📄</div>
+                                <div class="file-upload-text" id="podcastFileText">Drop PDF or DOCX here, or click to browse</div>
+                                <input type="file" id="podcastFileInput" name="file"
+                                       accept=".pdf,.docx" style="display:none;"
+                                       onchange="podcastOnFileSelect(this)">
+                            </div>
+                        </div>
+
+                        <!-- Language -->
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🌐 Podcast Language</h3>
+                                <p class="form-card-description">All speakers will speak in the selected language</p>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <select class="form-select" name="language" id="podcastLanguage">
+                                    <option value="en">English</option>
+                                    <option value="ar">العربية (Arabic)</option>
+                                    <option value="fr">Français (French)</option>
+                                    <option value="de">Deutsch (German)</option>
+                                    <option value="es">Español (Spanish)</option>
+                                    <option value="zh">中文 (Chinese)</option>
+                                    <option value="tr">Türkçe (Turkish)</option>
+                                    <option value="ur">اردو (Urdu)</option>
+                                    <option value="it">Italiano (Italian)</option>
+                                    <option value="pt">Português (Portuguese)</option>
+                                    <option value="ru">Русский (Russian)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Speakers -->
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎙️ Speakers</h3>
+                                <p class="form-card-description">Set each speaker's name and gender — any combination allowed</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Number of Speakers</label>
+                                <div style="display:flex;gap:10px;margin-top:6px;">
+                                    <label class="podcast-count-opt selected" onclick="podcastSetCount(2,this)">2</label>
+                                    <label class="podcast-count-opt" onclick="podcastSetCount(3,this)">3</label>
+                                    <label class="podcast-count-opt" onclick="podcastSetCount(4,this)">4</label>
+                                </div>
+                                <input type="hidden" name="num_speakers" id="podcastNumSpeakers" value="2">
+                            </div>
+
+                            <div id="podcastSpeakerRows" style="display:flex;flex-direction:column;gap:10px;">
+                                <!-- Speaker 1 -->
+                                <div class="podcast-spk-row" id="podcastSpk1">
+                                    <div class="podcast-spk-badge">1</div>
+                                    <input type="text" class="form-input" name="speaker_1_name" placeholder="Speaker 1 name" style="flex:1;min-width:0;">
+                                    <div class="podcast-gender-group">
+                                        <label class="podcast-gender-btn selected" onclick="podcastSetGender(1,'male',this)">♂ Male</label>
+                                        <label class="podcast-gender-btn" onclick="podcastSetGender(1,'female',this)">♀ Female</label>
+                                    </div>
+                                    <input type="hidden" name="speaker_1_gender" id="podcastG1" value="male">
+                                </div>
+                                <!-- Speaker 2 -->
+                                <div class="podcast-spk-row" id="podcastSpk2">
+                                    <div class="podcast-spk-badge">2</div>
+                                    <input type="text" class="form-input" name="speaker_2_name" placeholder="Speaker 2 name" style="flex:1;min-width:0;">
+                                    <div class="podcast-gender-group">
+                                        <label class="podcast-gender-btn" onclick="podcastSetGender(2,'male',this)">♂ Male</label>
+                                        <label class="podcast-gender-btn selected" onclick="podcastSetGender(2,'female',this)">♀ Female</label>
+                                    </div>
+                                    <input type="hidden" name="speaker_2_gender" id="podcastG2" value="female">
+                                </div>
+                                <!-- Speaker 3 (hidden) -->
+                                <div class="podcast-spk-row" id="podcastSpk3" style="display:none;">
+                                    <div class="podcast-spk-badge">3</div>
+                                    <input type="text" class="form-input" name="speaker_3_name" placeholder="Speaker 3 name" style="flex:1;min-width:0;">
+                                    <div class="podcast-gender-group">
+                                        <label class="podcast-gender-btn selected" onclick="podcastSetGender(3,'male',this)">♂ Male</label>
+                                        <label class="podcast-gender-btn" onclick="podcastSetGender(3,'female',this)">♀ Female</label>
+                                    </div>
+                                    <input type="hidden" name="speaker_3_gender" id="podcastG3" value="male">
+                                </div>
+                                <!-- Speaker 4 (hidden) -->
+                                <div class="podcast-spk-row" id="podcastSpk4" style="display:none;">
+                                    <div class="podcast-spk-badge">4</div>
+                                    <input type="text" class="form-input" name="speaker_4_name" placeholder="Speaker 4 name" style="flex:1;min-width:0;">
+                                    <div class="podcast-gender-group">
+                                        <label class="podcast-gender-btn" onclick="podcastSetGender(4,'male',this)">♂ Male</label>
+                                        <label class="podcast-gender-btn selected" onclick="podcastSetGender(4,'female',this)">♀ Female</label>
+                                    </div>
+                                    <input type="hidden" name="speaker_4_gender" id="podcastG4" value="female">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Duration -->
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">⏱️ Podcast Duration</h3>
+                                <p class="form-card-description">Approximate length of the generated audio</p>
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <label class="podcast-count-opt selected" style="flex:1;"
+                                       onclick="podcastSetDuration(20,this)">
+                                    20 min
+                                </label>
+                                <label class="podcast-count-opt" style="flex:1;"
+                                       onclick="podcastSetDuration(40,this)">
+                                    40 min
+                                </label>
+                                <label class="podcast-count-opt" style="flex:1;"
+                                       onclick="podcastSetDuration(60,this)">
+                                    60 min
+                                </label>
+                            </div>
+                            <input type="hidden" name="duration" id="podcastDuration" value="20">
+                        </div>
+
+                        <!-- Style -->
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h3 class="form-card-title">🎭 Podcast Style</h3>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <select class="form-select" name="style">
+                                    <option value="casual">💬 Casual Conversation</option>
+                                    <option value="academic">🎓 Academic Discussion</option>
+                                    <option value="debate">⚖️ Debate &amp; Analysis</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-primary" id="podcastGenerateBtn" onclick="podcastSubmit()">
+                            🎙️ Generate Podcast
+                        </button>
+                    </form>
+
+                    <!-- Progress -->
+                    <div id="podcastProgress" style="display:none;margin-top:18px;">
+                        <div class="form-card" style="text-align:center;padding:24px;">
+                            <div class="aim-spinner" style="margin:0 auto 12px;"></div>
+                            <div id="podcastProgressStatus" style="font-weight:700;color:#1e293b;margin-bottom:4px;">Starting...</div>
+                            <div style="margin-top:12px;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden;">
+                                <div id="podcastProgressBar" style="height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;width:0%;transition:width 0.4s;"></div>
+                            </div>
+                            <div id="podcastProgressPct" style="font-size:11px;color:#94a3b8;margin-top:6px;">0%</div>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div id="podcastResult" style="display:none;margin-top:18px;">
+                        <div class="form-card" style="text-align:center;padding:28px;">
+                            <div style="font-size:2.4rem;margin-bottom:8px;">🎙️</div>
+                            <div style="font-weight:700;font-size:1.1rem;color:#059669;margin-bottom:14px;">Podcast ready!</div>
+                            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                                <button id="podcastDownloadBtn" class="btn-primary" style="background:linear-gradient(135deg,#059669,#10b981);">
+                                    ⬇️ Download MP3
+                                </button>
+                                <button id="podcastTranscriptBtn" class="btn-primary" style="background:linear-gradient(135deg,#2563eb,#3b82f6);display:none;">
+                                    📄 Download Transcript
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
