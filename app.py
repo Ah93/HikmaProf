@@ -1316,6 +1316,12 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/select', methods=['GET'])
+def select_mode():
+    """Mode selection screen"""
+    return render_template('select.html')
+
+
 @app.route('/app', methods=['GET'])
 def app_interface():
     """Web interface - Desktop UI"""
@@ -3568,6 +3574,760 @@ def get_assessment(job_id):
         return jsonify(json.load(f))
 
 
+@app.route('/api/summarize', methods=['POST'])
+def summarize_document():
+    """Smart Summarizer — extract structured summary from uploaded document."""
+    import requests as _req
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+
+    language = request.form.get('language', 'en')
+    lang_names = {
+        'en': 'English', 'ar': 'Arabic', 'fr': 'French', 'de': 'German',
+        'es': 'Spanish', 'zh': 'Chinese', 'it': 'Italian', 'pt': 'Portuguese',
+        'ru': 'Russian', 'tr': 'Turkish', 'ur': 'Urdu',
+    }
+    lang_name = lang_names.get(language, 'English')
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.pdf', '.docx', '.doc', '.pptx', '.ppt', '.tex'):
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    tmp_path = os.path.join(OUTPUT_FOLDER, f'_sum_{uuid.uuid4().hex}{ext}')
+    try:
+        file.save(tmp_path)
+        text = _extract_doc_text(tmp_path)
+        if not text.strip():
+            return jsonify({'error': 'Could not extract text from document'}), 400
+
+        # Limit to ~8000 words to stay within token budget
+        words = text.split()
+        if len(words) > 8000:
+            text = ' '.join(words[:8000]) + '\n[Document truncated for summary]'
+
+        api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'DeepSeek API key not configured'}), 500
+
+        prompt = f"""You are an expert academic summarizer. Analyse the document below and return a structured summary in {lang_name}.
+
+Return ONLY valid JSON (no markdown fences, no extra text) with this exact schema:
+{{
+  "title": "Inferred document title",
+  "overview": "2-3 sentence overview of the whole document",
+  "key_concepts": [
+    {{"term": "Concept name", "explanation": "One-sentence explanation"}}
+  ],
+  "main_arguments": [
+    "First main argument or finding",
+    "Second main argument or finding"
+  ],
+  "bullet_takeaways": [
+    "Most important takeaway",
+    "Second takeaway"
+  ]
+}}
+
+Rules:
+- key_concepts: exactly 6 entries — the most important terms/concepts
+- main_arguments: exactly 5 entries — core claims or findings
+- bullet_takeaways: exactly 5 entries — actionable or memorable points
+- All text in {lang_name}
+- Keep each item concise (1-2 sentences max)
+
+Document:
+{text}"""
+
+        resp = _req.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={'model': 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}],
+                  'temperature': 0.4, 'max_tokens': 3000},
+            timeout=90
+        )
+        resp.raise_for_status()
+        raw = resp.json()['choices'][0]['message']['content'].strip()
+
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        summary = json.loads(raw)
+        return jsonify(summary)
+
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Failed to parse AI response'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+@app.route('/api/summarize/docx', methods=['POST'])
+def export_summary_docx():
+    """Build a downloadable .docx from already-generated Smart Summarizer JSON."""
+    from docx import Document as _DocxDoc
+    from docx.shared import RGBColor
+    import io as _io
+
+    data = request.get_json(force=True) or {}
+    title = data.get('title', 'Document Summary')
+    overview = data.get('overview', '')
+    key_concepts = data.get('key_concepts', [])
+    main_arguments = data.get('main_arguments', [])
+    bullet_takeaways = data.get('bullet_takeaways', [])
+
+    doc = _DocxDoc()
+    doc.add_heading(title, level=0)
+
+    if overview:
+        doc.add_heading('Overview', level=1)
+        doc.add_paragraph(overview)
+
+    if key_concepts:
+        doc.add_heading('Key Concepts', level=1)
+        for kc in key_concepts:
+            p = doc.add_paragraph(style='List Bullet')
+            run = p.add_run(f"{kc.get('term', '')}: ")
+            run.bold = True
+            run.font.color.rgb = RGBColor(0x1D, 0x2D, 0x5C)
+            p.add_run(kc.get('explanation', ''))
+
+    if main_arguments:
+        doc.add_heading('Main Arguments', level=1)
+        for arg in main_arguments:
+            doc.add_paragraph(arg, style='List Bullet')
+
+    if bullet_takeaways:
+        doc.add_heading('Key Takeaways', level=1)
+        for i, point in enumerate(bullet_takeaways, 1):
+            doc.add_paragraph(f'{i}. {point}')
+
+    buf = _io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    safe_name = secure_filename(title) or 'summary'
+    return send_file(
+        buf,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        as_attachment=True,
+        download_name=f'{safe_name}.docx'
+    )
+
+
+@app.route('/api/assessment/generate', methods=['POST'])
+def generate_assessment_standalone():
+    """Assessment — generate a full quiz (multiple-choice + true/false + flashcards) directly
+    from an uploaded document, no slide deck required. Launches the same quiz/certificate UI
+    as the AI Course Studio assessments, via a lightweight job folder."""
+    import requests as _req
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.pdf', '.docx', '.doc', '.pptx', '.ppt', '.tex'):
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    tmp_path = os.path.join(OUTPUT_FOLDER, f'_asm_{uuid.uuid4().hex}{ext}')
+    try:
+        file.save(tmp_path)
+        text = _extract_doc_text(tmp_path)
+        if not text.strip():
+            return jsonify({'error': 'Could not extract text from document'}), 400
+
+        words = text.split()
+        if len(words) > 8000:
+            text = ' '.join(words[:8000]) + '\n[Document truncated]'
+
+        api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'DeepSeek API key not configured'}), 500
+
+        prompt = f"""You are an educational assessment expert. Create a full assessment from the document below.
+
+Return ONLY valid JSON (no markdown fences, no extra text) matching this exact schema:
+{{
+  "title": "Inferred document/course title",
+  "questions": [
+    {{"id": 1, "question": "Question text?", "options": ["Option A", "Option B", "Option C", "Option D"], "correct": 0, "explanation": "One sentence explaining the correct answer."}}
+  ],
+  "true_false": [
+    {{"id": 1, "statement": "A factual statement about the document.", "answer": true, "explanation": "One sentence."}}
+  ],
+  "flashcards": [
+    {{"id": 1, "term": "Key term or concept", "definition": "Clear, concise definition."}}
+  ]
+}}
+
+Rules:
+- Exactly 8 multiple-choice questions, each with exactly 4 options; correct is 0-based index
+- Exactly 8 true/false statements, roughly half true and half false
+- Exactly 8 flashcards for the most important terms/concepts
+- Test understanding, not just memorization
+- Keep explanations to 1-2 sentences
+
+Document:
+{text}"""
+
+        resp = _req.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={'model': 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}],
+                  'temperature': 0.6, 'max_tokens': 4000},
+            timeout=90
+        )
+        resp.raise_for_status()
+        raw = resp.json()['choices'][0]['message']['content'].strip()
+
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        assessment = json.loads(raw)
+        if not assessment.get('questions'):
+            return jsonify({'error': 'No questions generated'}), 500
+
+        title = assessment.get('title') or 'HikmaProf Course'
+        job_id = str(uuid.uuid4())
+        job_dir = os.path.join(OUTPUT_FOLDER, 'jobs', job_id)
+        os.makedirs(job_dir, exist_ok=True)
+
+        assessment['job_id'] = job_id
+        assessment['generated_at'] = datetime.now().isoformat()
+        with open(os.path.join(job_dir, 'assessment.json'), 'w', encoding='utf-8') as f:
+            json.dump(assessment, f, ensure_ascii=False, indent=2)
+
+        # Minimal slide-plan stub so the certificate endpoint can resolve a course title
+        with open(os.path.join(job_dir, 'slide-plan.json'), 'w', encoding='utf-8') as f:
+            json.dump({'presentationMetadata': {'title': title}}, f)
+
+        return jsonify({'job_id': job_id, 'title': title})
+
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Failed to parse AI response'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+@app.route('/api/lecture-notes', methods=['POST'])
+def generate_lecture_notes():
+    """Lecture Notes — structured, printable handout from an uploaded document."""
+    import requests as _req
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+
+    language = request.form.get('language', 'en')
+    lang_names = {
+        'en': 'English', 'ar': 'Arabic', 'fr': 'French', 'de': 'German',
+        'es': 'Spanish', 'zh': 'Chinese', 'it': 'Italian', 'pt': 'Portuguese',
+        'ru': 'Russian', 'tr': 'Turkish', 'ur': 'Urdu',
+    }
+    lang_name = lang_names.get(language, 'English')
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.pdf', '.docx', '.doc', '.pptx', '.ppt', '.tex'):
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    tmp_path = os.path.join(OUTPUT_FOLDER, f'_ln_{uuid.uuid4().hex}{ext}')
+    try:
+        file.save(tmp_path)
+        text = _extract_doc_text(tmp_path)
+        if not text.strip():
+            return jsonify({'error': 'Could not extract text from document'}), 400
+
+        words = text.split()
+        if len(words) > 8000:
+            text = ' '.join(words[:8000]) + '\n[Document truncated]'
+
+        api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'DeepSeek API key not configured'}), 500
+
+        prompt = f"""You are a university lecturer preparing a printable handout for your students. Turn the document below into structured lecture notes, written in {lang_name}.
+
+Return ONLY valid JSON (no markdown fences, no extra text) with this exact schema:
+{{
+  "title": "Lecture title",
+  "sections": [
+    {{
+      "heading": "Section heading",
+      "body": "2-4 sentence explanation of this section in plain, teachable language",
+      "key_terms": [
+        {{"term": "Term", "note": "Short margin-note definition (max 12 words)"}}
+      ]
+    }}
+  ],
+  "summary_points": [
+    "Most important takeaway to remember before the exam"
+  ]
+}}
+
+Rules:
+- sections: 4-6 entries covering the document in logical teaching order
+- Each section has 1-3 key_terms (only the terms actually worth highlighting in that section; can be empty list)
+- summary_points: exactly 5 entries
+- All text in {lang_name}
+- Write for students studying for an exam: clear, concise, no fluff
+
+Document:
+{text}"""
+
+        resp = _req.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={'model': 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}],
+                  'temperature': 0.4, 'max_tokens': 3500},
+            timeout=90
+        )
+        resp.raise_for_status()
+        raw = resp.json()['choices'][0]['message']['content'].strip()
+
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        notes = json.loads(raw)
+        return jsonify(notes)
+
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Failed to parse AI response'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+@app.route('/api/lecture-notes/docx', methods=['POST'])
+def export_lecture_notes_docx():
+    """Build a downloadable .docx from already-generated lecture notes JSON."""
+    from docx import Document as _DocxDoc
+    from docx.shared import Pt, RGBColor
+    import io as _io
+
+    data = request.get_json(force=True) or {}
+    title = data.get('title', 'Lecture Notes')
+    sections = data.get('sections', [])
+    summary_points = data.get('summary_points', [])
+
+    doc = _DocxDoc()
+    doc.add_heading(title, level=0)
+
+    for sec in sections:
+        doc.add_heading(sec.get('heading', ''), level=1)
+        if sec.get('body'):
+            doc.add_paragraph(sec['body'])
+        for kt in sec.get('key_terms', []):
+            p = doc.add_paragraph(style='List Bullet')
+            run = p.add_run(f"{kt.get('term', '')}: ")
+            run.bold = True
+            run.font.color.rgb = RGBColor(0x1D, 0x2D, 0x5C)
+            p.add_run(kt.get('note', ''))
+
+    if summary_points:
+        doc.add_heading('Summary Points', level=1)
+        for point in summary_points:
+            doc.add_paragraph(point, style='List Bullet')
+
+    buf = _io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    safe_name = secure_filename(title) or 'lecture-notes'
+    return send_file(
+        buf,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        as_attachment=True,
+        download_name=f'{safe_name}.docx'
+    )
+
+
+# Tutor sessions keep their extracted document text on disk (OUTPUT_FOLDER/jobs/<id>/tutor_document.txt)
+# and are otherwise stateless — each /ask call reads it fresh and receives bounded chat history
+# from the client, so there is no server-side conversation state to leak or expire.
+TUTOR_MAX_HISTORY_TURNS = 8        # last N messages (user+assistant) sent back for context
+TUTOR_MAX_DOC_WORDS = 7000
+TUTOR_MAX_QUESTION_LEN = 2000
+TUTOR_MAX_HISTORY_MSG_LEN = 4000
+
+
+@app.route('/api/tutor/start', methods=['POST'])
+def tutor_start():
+    """AI Tutor — upload a document and start a Q&A chat session grounded in its content."""
+    import requests as _req
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.pdf', '.docx', '.doc', '.pptx', '.ppt', '.tex'):
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    tmp_path = os.path.join(OUTPUT_FOLDER, f'_tut_{uuid.uuid4().hex}{ext}')
+    try:
+        file.save(tmp_path)
+        text = _extract_doc_text(tmp_path)
+        if not text.strip():
+            return jsonify({'error': 'Could not extract text from document'}), 400
+
+        words = text.split()
+        if len(words) > TUTOR_MAX_DOC_WORDS:
+            text = ' '.join(words[:TUTOR_MAX_DOC_WORDS]) + '\n[Document truncated]'
+
+        api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'DeepSeek API key not configured'}), 500
+
+        title = 'Your Document'
+        suggested_questions = []
+        try:
+            prompt = f"""You are an AI tutor onboarding a student to study the document below.
+
+Return ONLY valid JSON (no markdown fences, no extra text) with this exact schema:
+{{
+  "title": "Inferred document/course title, short",
+  "suggested_questions": ["A natural question a curious student might ask about this material", "...", "...", "..."]
+}}
+
+Rules:
+- Exactly 4 suggested_questions, each under 12 words, specific to this document's actual content
+- Do not number them
+
+Document:
+{text}"""
+            resp = _req.post(
+                'https://api.deepseek.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={'model': 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}],
+                      'temperature': 0.5, 'max_tokens': 500},
+                timeout=60
+            )
+            resp.raise_for_status()
+            raw = resp.json()['choices'][0]['message']['content'].strip()
+            if raw.startswith('```'):
+                raw = raw.split('```')[1]
+                if raw.startswith('json'):
+                    raw = raw[4:]
+                raw = raw.strip()
+            onboarding = json.loads(raw)
+            title = onboarding.get('title') or title
+            suggested_questions = onboarding.get('suggested_questions') or []
+        except Exception:
+            # Onboarding flourishes are optional — a working chat session matters more than this call succeeding
+            pass
+
+        job_id = str(uuid.uuid4())
+        job_dir = os.path.join(OUTPUT_FOLDER, 'jobs', job_id)
+        os.makedirs(job_dir, exist_ok=True)
+        with open(os.path.join(job_dir, 'tutor_document.txt'), 'w', encoding='utf-8') as f:
+            f.write(text)
+
+        return jsonify({'job_id': job_id, 'title': title, 'suggested_questions': suggested_questions})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+@app.route('/api/tutor/<job_id>/ask', methods=['POST'])
+def tutor_ask(job_id):
+    """Answer a student's question grounded in the document uploaded for this tutor session."""
+    import requests as _req
+
+    data = request.get_json(force=True) or {}
+    question = (data.get('question') or '').strip()
+    history = data.get('history') or []
+
+    if not question:
+        return jsonify({'error': 'Question is required'}), 400
+    if len(question) > TUTOR_MAX_QUESTION_LEN:
+        return jsonify({'error': 'Question is too long'}), 400
+    if not isinstance(history, list):
+        history = []
+
+    doc_path = os.path.join(OUTPUT_FOLDER, 'jobs', job_id, 'tutor_document.txt')
+    if not os.path.exists(doc_path):
+        return jsonify({'error': 'This tutor session has expired or was not found. Please upload your document again.'}), 404
+
+    api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'DeepSeek API key not configured'}), 500
+
+    try:
+        with open(doc_path, 'r', encoding='utf-8') as f:
+            document_text = f.read()
+
+        system_prompt = f"""You are a patient, encouraging AI tutor helping a student understand a specific document. \
+Answer clearly and pedagogically: explain concepts in plain language, use short paragraphs or bullet points when \
+helpful, and reference the document's own content and terminology. If the student's question genuinely cannot be \
+answered from the document, say so honestly before offering general knowledge, and make clear which part of your \
+answer is outside the document. Keep answers focused — a few short paragraphs at most unless the student asks for \
+more depth.
+
+Document:
+{document_text}"""
+
+        messages = [{'role': 'system', 'content': system_prompt}]
+        safe_history = []
+        for turn in history[-TUTOR_MAX_HISTORY_TURNS:]:
+            if not isinstance(turn, dict):
+                continue
+            role = turn.get('role')
+            content = str(turn.get('content', ''))[:TUTOR_MAX_HISTORY_MSG_LEN]
+            if role in ('user', 'assistant') and content.strip():
+                safe_history.append({'role': role, 'content': content})
+        messages.extend(safe_history)
+        messages.append({'role': 'user', 'content': question})
+
+        resp = _req.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={'model': 'deepseek-chat', 'messages': messages, 'temperature': 0.5, 'max_tokens': 1000},
+            timeout=60
+        )
+        resp.raise_for_status()
+        answer = resp.json()['choices'][0]['message']['content'].strip()
+        return jsonify({'answer': answer})
+
+    except _req.exceptions.Timeout:
+        return jsonify({'error': 'The tutor took too long to respond. Please try again.'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _cert_star(c, cx, cy, r_outer, r_inner, fill_color):
+    import math
+    p = c.beginPath()
+    pts = []
+    for i in range(10):
+        angle = math.pi / 2 + i * math.pi / 5
+        r = r_outer if i % 2 == 0 else r_inner
+        pts.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
+    p.moveTo(*pts[0])
+    for pt in pts[1:]:
+        p.lineTo(*pt)
+    p.close()
+    c.setFillColor(fill_color)
+    c.drawPath(p, fill=1, stroke=0)
+
+
+def _cert_corner_bracket(c, x, y, dx, dy, length, color):
+    c.setStrokeColor(color)
+    c.setLineWidth(1.6)
+    c.line(x, y, x + dx * length, y)
+    c.line(x, y, x, y + dy * length)
+
+
+@app.route('/api/job/<job_id>/certificate', methods=['POST'])
+def generate_certificate(job_id):
+    """Generate a Certificate of Completion PDF — unlocked after passing the course quiz (>=70%)."""
+    data = request.get_json(force=True) or {}
+    student_name = (data.get('student_name') or '').strip()
+    try:
+        score_pct = float(data.get('score_pct', 0))
+    except (TypeError, ValueError):
+        score_pct = 0
+
+    if not student_name:
+        return jsonify({'error': 'Student name is required'}), 400
+    if len(student_name) > 80:
+        return jsonify({'error': 'Student name is too long'}), 400
+    if score_pct < 70:
+        return jsonify({'error': 'A score of at least 70% is required to unlock the certificate'}), 403
+
+    job_dir = os.path.join(OUTPUT_FOLDER, 'jobs', job_id)
+    slide_plan_path = os.path.join(job_dir, 'slide-plan.json')
+    course_title = 'HikmaProf Course'
+    if os.path.exists(slide_plan_path):
+        try:
+            with open(slide_plan_path, 'r', encoding='utf-8') as f:
+                slide_plan = json.load(f) or {}
+            meta = slide_plan.get('presentationMetadata') or slide_plan.get('metadata') or {}
+            if isinstance(meta, dict) and meta.get('title'):
+                course_title = meta['title']
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    try:
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib.units import inch
+        from reportlab.lib.colors import HexColor
+        from reportlab.pdfgen import canvas as _canvas
+        from reportlab.lib.utils import ImageReader
+        import io as _io
+
+        navy  = HexColor('#1D2D5C')
+        teal  = HexColor('#2AADA6')
+        gold  = HexColor('#C09A45')
+        grey  = HexColor('#6b7280')
+        cream = HexColor('#fdfbf6')
+
+        buf = _io.BytesIO()
+        page_w, page_h = landscape(letter)
+        c = _canvas.Canvas(buf, pagesize=landscape(letter))
+
+        # Background wash + ornamental frame
+        c.setFillColor(cream)
+        c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+        c.setStrokeColor(navy)
+        c.setLineWidth(4)
+        c.rect(0.35 * inch, 0.35 * inch, page_w - 0.7 * inch, page_h - 0.7 * inch)
+        c.setStrokeColor(gold)
+        c.setLineWidth(1)
+        c.rect(0.52 * inch, 0.52 * inch, page_w - 1.04 * inch, page_h - 1.04 * inch)
+
+        # Corner brackets (ornamental accent just inside the gold rule)
+        bx, by, blen = 0.72 * inch, 0.72 * inch, 0.45 * inch
+        _cert_corner_bracket(c, bx, by, 1, 1, blen, gold)                                  # bottom-left
+        _cert_corner_bracket(c, page_w - bx, by, -1, 1, blen, gold)                        # bottom-right
+        _cert_corner_bracket(c, bx, page_h - by, 1, -1, blen, gold)                        # top-left
+        _cert_corner_bracket(c, page_w - bx, page_h - by, -1, -1, blen, gold)              # top-right
+
+        # Logo
+        logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo', 'logo_hikmaprof_color_trans.png')
+        if os.path.exists(logo_path):
+            logo = ImageReader(logo_path)
+            lw, lh = logo.getSize()
+            disp_h = 0.55 * inch
+            disp_w = disp_h * lw / lh
+            c.drawImage(logo, (page_w - disp_w) / 2, page_h - 1.2 * inch, width=disp_w, height=disp_h, mask='auto')
+
+        # Title
+        c.setFillColor(navy)
+        c.setFont('Times-Bold', 32)
+        c.drawCentredString(page_w / 2, page_h - 2.0 * inch, 'Certificate of Completion')
+
+        c.setStrokeColor(gold)
+        c.setLineWidth(1.5)
+        c.line(page_w / 2 - 1.5 * inch, page_h - 2.22 * inch, page_w / 2 + 1.5 * inch, page_h - 2.22 * inch)
+
+        # Body
+        c.setFillColor(grey)
+        c.setFont('Times-Italic', 14)
+        c.drawCentredString(page_w / 2, page_h - 2.75 * inch, 'This certifies that')
+
+        c.setFillColor(navy)
+        c.setFont('Times-Bold', 30)
+        c.drawCentredString(page_w / 2, page_h - 3.35 * inch, student_name)
+
+        c.setStrokeColor(teal)
+        c.setLineWidth(1)
+        name_w = c.stringWidth(student_name, 'Times-Bold', 30)
+        c.line(page_w / 2 - name_w / 2 - 0.25 * inch, page_h - 3.55 * inch,
+               page_w / 2 + name_w / 2 + 0.25 * inch, page_h - 3.55 * inch)
+
+        c.setFillColor(grey)
+        c.setFont('Times-Roman', 14)
+        c.drawCentredString(page_w / 2, page_h - 4.0 * inch, 'has successfully completed the course')
+
+        c.setFillColor(teal)
+        c.setFont('Times-BoldItalic', 19)
+        c.drawCentredString(page_w / 2, page_h - 4.55 * inch, course_title)
+
+        c.setFillColor(grey)
+        c.setFont('Times-Italic', 12.5)
+        c.drawCentredString(page_w / 2, page_h - 4.95 * inch, f'with a final assessment score of {round(score_pct)}%')
+
+        # Gold seal medallion — fills the lower-centre space with a ceremonial mark
+        seal_cx, seal_cy = page_w / 2, page_h - 6.35 * inch
+        c.setStrokeColor(teal)
+        c.setLineWidth(1.4)
+        tail_w = 0.22 * inch
+        c.line(seal_cx - tail_w, seal_cy - 0.1 * inch, seal_cx - tail_w - 0.12 * inch, seal_cy - 0.85 * inch)
+        c.line(seal_cx - tail_w - 0.12 * inch, seal_cy - 0.85 * inch, seal_cx - tail_w + 0.16 * inch, seal_cy - 0.7 * inch)
+        c.line(seal_cx - tail_w + 0.16 * inch, seal_cy - 0.7 * inch, seal_cx - tail_w, seal_cy - 0.1 * inch)
+        c.setFillColor(teal)
+        p1 = c.beginPath()
+        p1.moveTo(seal_cx - tail_w, seal_cy - 0.1 * inch)
+        p1.lineTo(seal_cx - tail_w - 0.12 * inch, seal_cy - 0.85 * inch)
+        p1.lineTo(seal_cx - tail_w + 0.16 * inch, seal_cy - 0.7 * inch)
+        p1.close()
+        c.drawPath(p1, fill=1, stroke=0)
+
+        c.setFillColor(gold)
+        p2 = c.beginPath()
+        p2.moveTo(seal_cx + tail_w, seal_cy - 0.1 * inch)
+        p2.lineTo(seal_cx + tail_w + 0.12 * inch, seal_cy - 0.85 * inch)
+        p2.lineTo(seal_cx + tail_w - 0.16 * inch, seal_cy - 0.7 * inch)
+        p2.close()
+        c.drawPath(p2, fill=1, stroke=0)
+
+        c.setFillColor(gold)
+        c.circle(seal_cx, seal_cy, 0.42 * inch, fill=1, stroke=0)
+        c.setFillColor(navy)
+        c.circle(seal_cx, seal_cy, 0.34 * inch, fill=1, stroke=0)
+        _cert_star(c, seal_cx, seal_cy, 0.19 * inch, 0.08 * inch, cream)
+
+        # Footer: date + signature
+        today = datetime.now().strftime('%B %d, %Y')
+        c.setFont('Times-Roman', 11)
+        c.setFillColor(grey)
+        c.drawCentredString(1.7 * inch, 0.92 * inch, today)
+        c.setStrokeColor(gold)
+        c.setLineWidth(0.8)
+        c.line(1.05 * inch, 1.14 * inch, 2.35 * inch, 1.14 * inch)
+        c.setFont('Times-Roman', 9)
+        c.drawCentredString(1.7 * inch, 0.76 * inch, 'D A T E   I S S U E D')
+
+        c.setFont('Times-Italic', 22)
+        c.setFillColor(navy)
+        c.drawCentredString(page_w - 1.9 * inch, 1.0 * inch, 'HikmaProf')
+        c.setStrokeColor(gold)
+        c.line(page_w - 2.55 * inch, 1.14 * inch, page_w - 1.25 * inch, 1.14 * inch)
+        c.setFont('Times-Roman', 9)
+        c.setFillColor(grey)
+        c.drawCentredString(page_w - 1.9 * inch, 0.76 * inch, 'C E R T I F I C A T I O N   T E A M')
+
+        # Certificate ID (small authenticity touch)
+        cert_id = f'Certificate ID: HKP-{job_id[:8].upper()}-{int(datetime.now().timestamp()) % 100000}'
+        c.setFont('Times-Roman', 8)
+        c.setFillColor(HexColor('#a8a29e'))
+        c.drawCentredString(page_w / 2, 0.68 * inch, cert_id)
+
+        c.showPage()
+        c.save()
+        buf.seek(0)
+
+        safe_name = secure_filename(student_name) or 'student'
+        return send_file(
+            buf,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'HikmaProf-Certificate-{safe_name}.pdf'
+        )
+    except Exception as e:
+        return jsonify({'error': f'Certificate generation failed: {str(e)}'}), 500
+
+
 @app.route('/api/avatars/<filename>', methods=['GET'])
 def serve_avatar(filename):
     """Serve avatar images from ppt_to_video/avatars folder"""
@@ -3952,7 +4712,7 @@ def _update_podcast_job(job_id, machine_status, progress=0, step='', error=''):
 
 
 def _extract_doc_text(file_path):
-    """Extract plain text from PDF or DOCX."""
+    """Extract plain text from PDF, DOCX, or PPTX."""
     ext = os.path.splitext(file_path)[1].lower()
     if ext == '.pdf':
         import fitz
@@ -3965,6 +4725,26 @@ def _extract_doc_text(file_path):
             import docx as _docx
             d = _docx.Document(file_path)
             return '\n'.join(p.text for p in d.paragraphs if p.text.strip())
+        except Exception:
+            return ''
+    if ext in ('.pptx', '.ppt'):
+        try:
+            from pptx import Presentation
+            prs = Presentation(file_path)
+            parts = []
+            for i, slide in enumerate(prs.slides, 1):
+                lines = []
+                for shape in slide.shapes:
+                    if shape.has_text_frame and shape.text_frame.text.strip():
+                        lines.append(shape.text_frame.text.strip())
+                    if shape.has_table:
+                        for row in shape.table.rows:
+                            lines.append(' | '.join(c.text for c in row.cells))
+                if slide.has_notes_slide and slide.notes_slide.notes_text_frame.text.strip():
+                    lines.append(slide.notes_slide.notes_text_frame.text.strip())
+                if lines:
+                    parts.append(f'Slide {i}:\n' + '\n'.join(lines))
+            return '\n\n'.join(parts)
         except Exception:
             return ''
     return ''

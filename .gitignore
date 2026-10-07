@@ -26,6 +26,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Office lock files
+~$*
+
 # Environment variables
 .env
 *.env

@@ -11,6 +11,9 @@ class AssessmentUI {
         this.fcIndex     = 0;
         this.fcOrder     = [];
         this.fcFlipped   = false;
+        this.lastScorePct = null;
+        // true/false state
+        this.tfAnswers   = [];
     }
 
     /* ── Open modal ──────────────────────────────────────────────── */
@@ -53,8 +56,10 @@ class AssessmentUI {
             t.classList.toggle('active', t.dataset.tab === tab);
         });
         document.getElementById('quizPane').classList.toggle('active', tab === 'quiz');
+        document.getElementById('truefalsePane').classList.toggle('active', tab === 'truefalse');
         document.getElementById('flashcardsPane').classList.toggle('active', tab === 'flashcards');
-        document.getElementById('quizPane').style.display      = tab === 'quiz'       ? 'block' : 'none';
+        document.getElementById('quizPane').style.display       = tab === 'quiz'       ? 'block' : 'none';
+        document.getElementById('truefalsePane').style.display  = tab === 'truefalse'  ? 'block' : 'none';
         document.getElementById('flashcardsPane').style.display = tab === 'flashcards' ? 'block' : 'none';
     }
 
@@ -70,6 +75,7 @@ class AssessmentUI {
     _showLoading(show) {
         document.getElementById('assessmentLoading').style.display  = show ? 'flex'  : 'none';
         document.getElementById('quizPane').style.display            = show ? 'none'  : 'block';
+        document.getElementById('truefalsePane').style.display       = 'none';
         document.getElementById('flashcardsPane').style.display      = 'none';
         document.getElementById('assessmentFooter').style.display    = show ? 'none'  : 'flex';
         document.getElementById('assessmentTabs').style.display      = show ? 'none'  : 'flex';
@@ -99,6 +105,7 @@ class AssessmentUI {
         const q = this.data.questions || [];
         this.answers = new Array(q.length).fill(-1);
         this.fcOrder = (this.data.flashcards || []).map((_, i) => i);
+        this.tfAnswers = new Array((this.data.true_false || []).length).fill(null);
     }
 
     /* ── Render everything ───────────────────────────────────────── */
@@ -106,6 +113,7 @@ class AssessmentUI {
         document.getElementById('assessmentTitle').textContent =
             this.data.title || 'Assessment';
         this._renderQuiz();
+        this._renderTrueFalse();
         this._renderFlashcards();
         this.switchTab('quiz');
     }
@@ -205,6 +213,7 @@ class AssessmentUI {
         const correct = this._countCorrect();
         const pct     = Math.round((correct / total) * 100);
         const { grade, color, msg } = this._grade(pct);
+        this.lastScorePct = pct;
 
         const pane = document.getElementById('quizPane');
         pane.innerHTML = `
@@ -218,8 +227,62 @@ class AssessmentUI {
                 <div class="score-actions">
                     <button class="btn-retry" onclick="assessmentUI._retryQuiz()">🔄 Retry Quiz</button>
                     <button class="btn-review" onclick="assessmentUI._enterReview()">📋 Review Answers</button>
+                    ${pct >= 70 ? `<button class="btn-certificate" onclick="assessmentUI._openCertificateForm()">🎓 Get Certificate</button>` : ''}
+                </div>
+                ${pct < 70 ? `<div class="cert-locked-hint">🔒 Score 70% or higher to unlock your certificate</div>` : ''}
+                <div id="certificateFormWrap"></div>
+            </div>`;
+    }
+
+    _openCertificateForm() {
+        const wrap = document.getElementById('certificateFormWrap');
+        if (!wrap) return;
+        wrap.innerHTML = `
+            <div class="certificate-form">
+                <label class="certificate-form-label">Enter your full name as it should appear on the certificate</label>
+                <div class="certificate-form-row">
+                    <input type="text" id="certStudentName" class="certificate-form-input" placeholder="e.g. Ahmed Al-Shaikh" maxlength="80">
+                    <button class="btn-certificate" id="certDownloadBtn" onclick="assessmentUI._downloadCertificate()">⬇️ Download PDF</button>
                 </div>
             </div>`;
+        document.getElementById('certStudentName').focus();
+    }
+
+    async _downloadCertificate() {
+        const input = document.getElementById('certStudentName');
+        const name  = input ? input.value.trim() : '';
+        if (!name) { input && input.focus(); return; }
+
+        const btn = document.getElementById('certDownloadBtn');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Generating…';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch(`${APP_PREFIX}/api/job/${this.currentJobId}/certificate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_name: name, score_pct: this.lastScorePct })
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || 'Certificate generation failed');
+            }
+            const blob = await resp.blob();
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url;
+            a.download = `HikmaProf-Certificate-${name.replace(/[^\w\- ]/g, '')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     }
 
     _grade(pct) {
@@ -270,6 +333,54 @@ class AssessmentUI {
         });
 
         pane.innerHTML = html;
+    }
+
+    /* ════════════════════════════════════════════════════════════ */
+    /*  TRUE / FALSE                                                 */
+    /* ════════════════════════════════════════════════════════════ */
+    _renderTrueFalse() {
+        const pane  = document.getElementById('truefalsePane');
+        const items = this.data.true_false || [];
+        if (!items.length) { pane.innerHTML = '<p style="color:#666;padding:20px">No true/false statements generated.</p>'; return; }
+
+        const answered = this.tfAnswers.filter(a => a !== null).length;
+        const correct  = items.filter((q, i) => this.tfAnswers[i] === q.answer).length;
+
+        let html = `
+            <div class="quiz-progress-wrap">
+                <span class="quiz-progress-label">True / False Practice</span>
+                <span class="quiz-score-badge">${correct} / ${answered} correct</span>
+            </div>`;
+
+        items.forEach((q, i) => {
+            const ua = this.tfAnswers[i];
+            const answered1 = ua !== null;
+            let trueCls = '', falseCls = '';
+            if (answered1) {
+                trueCls  = q.answer === true  ? 'correct' : (ua === true  ? 'wrong' : '');
+                falseCls = q.answer === false ? 'correct' : (ua === false ? 'wrong' : '');
+            }
+            html += `
+                <div class="question-card">
+                    <div class="question-number">Statement ${i + 1}</div>
+                    <div class="question-text">${this._esc(q.statement)}</div>
+                    <div class="tf-options">
+                        <button class="option-btn tf-btn ${trueCls}" onclick="assessmentUI._pickTF(${i}, true)" ${answered1 ? 'disabled' : ''}>✓ True</button>
+                        <button class="option-btn tf-btn ${falseCls}" onclick="assessmentUI._pickTF(${i}, false)" ${answered1 ? 'disabled' : ''}>✕ False</button>
+                    </div>
+                    <div class="explanation-box ${answered1 ? 'visible' : ''}">
+                        ${answered1 ? `<strong>${ua === q.answer ? '✅ Correct!' : '❌ Incorrect.'}</strong> ${this._esc(q.explanation || '')}` : ''}
+                    </div>
+                </div>`;
+        });
+
+        pane.innerHTML = html;
+    }
+
+    _pickTF(i, val) {
+        if (this.tfAnswers[i] !== null) return;
+        this.tfAnswers[i] = val;
+        this._renderTrueFalse();
     }
 
     /* ════════════════════════════════════════════════════════════ */

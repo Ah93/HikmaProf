@@ -3,7 +3,7 @@ const APP_PREFIX = window.APP_PREFIX || '';
 
 class DesktopUI {
     constructor() {
-        this.currentPanel = 'pdf-to-ppt';
+        this.currentPanel = 'home-select';
         this.templates = [];
         this.colors = [];
         this.selectedTemplate = 'modern';
@@ -14,6 +14,7 @@ class DesktopUI {
     }
 
     async init() {
+        this.applyModeFromURL();
         this.setupNavigation();
         this.setupFileUploads();
         await this.loadTemplatesAndColors();
@@ -21,6 +22,53 @@ class DesktopUI {
         this.renderCompactColors();
         this.addRecentJobsStyles();
         console.log('Desktop UI initialized');
+    }
+
+    applyModeFromURL() {
+        const GENERATION_PANELS = ['pdf-to-ppt', 'avatar-video', 'podcast', 'assessment', 'smart-summarizer', 'lecture-notes', 'ai-tutor'];
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('mode');
+
+        // Cross-cutting panels (not a single-document "mode") — land directly, nav stays untouched
+        if (mode === 'assessments') {
+            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById('panel-assessments');
+            if (target) target.classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.panel === 'assessments');
+            });
+            this.currentPanel = 'assessments';
+            const titleEl = document.getElementById('pageTitle');
+            const subEl = document.getElementById('pageSubtitle');
+            if (titleEl) titleEl.textContent = 'Assessments';
+            if (subEl) subEl.textContent = 'Generate quizzes and flashcards from your presentations';
+            window.assessmentUI && assessmentUI.loadJobList();
+            return;
+        }
+
+        if (!mode || !GENERATION_PANELS.includes(mode)) {
+            // No valid mode — redirect to selector
+            window.location.replace('/select');
+            return;
+        }
+
+        // Activate chosen panel
+        document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(`panel-${mode}`);
+        if (target) target.classList.add('active');
+        this.currentPanel = mode;
+
+        // Hide the other two generation-mode nav items
+        GENERATION_PANELS.forEach(p => {
+            const item = document.querySelector(`.nav-item[data-panel="${p}"]`);
+            if (!item) return;
+            if (p === mode) {
+                item.classList.add('active');
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
     }
 
     // Navigation
@@ -57,13 +105,18 @@ class DesktopUI {
 
         // Update page title
         const titles = {
-            'pdf-to-ppt': ['AI-Powered Course & Knowledge Creation', 'Convert research, notes and manuscripts into complete teaching material: slides, lessons, and video-ready outputs'],
+            'pdf-to-ppt': ['AI Course Studio', 'Convert research, notes and manuscripts into complete teaching material: slides, lessons, and video-ready outputs'],
             'ppt-to-video': ['PowerPoint to Video', 'Add avatar narration to your slides'],
             'pdf-to-both': ['Complete Workflow', 'Generate both presentation and video'],
             'templates': ['Template Gallery', 'Browse and preview all templates'],
             'recent': ['Recent Jobs', 'View your presentation history'],
             'assessments': ['Assessments', 'Generate quizzes and flashcards from your presentations'],
-            'podcast':     ['Podcast Generator', 'Turn any document into a multi-speaker audio podcast'],
+            'avatar-video': ['Video Presenter', 'Create a narrated video from your document with an AI avatar or voice cloning'],
+            'podcast':          ['Podcast Generator', 'Turn any document into a multi-speaker audio podcast'],
+            'assessment':        ['Assessment',         'Upload a document and generate a full quiz, true/false, and flashcards — score 70%+ to unlock a certificate'],
+            'smart-summarizer':  ['Smart Summarizer',   'Get a structured summary with key concepts, arguments, and takeaways'],
+            'lecture-notes':     ['Lecture Notes',      'Printable, structured lecture notes with headings, key terms, and margin notes'],
+            'ai-tutor':          ['AI Tutor',           'Chat with your document and get instant, grounded explanations of the material'],
             'help': ['Help & Documentation', 'Learn how to use the platform']
         };
 

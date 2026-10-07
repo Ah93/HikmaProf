@@ -48,6 +48,26 @@
                         <span class="nav-item-text">Podcast Generator</span>
                         <span class="nav-item-badge">NEW</span>
                     </a>
+                    <a class="nav-item" data-panel="assessment">
+                        <span class="nav-item-icon">🧪</span>
+                        <span class="nav-item-text">Assessment</span>
+                        <span class="nav-item-badge">NEW</span>
+                    </a>
+                    <a class="nav-item" data-panel="smart-summarizer">
+                        <span class="nav-item-icon">📝</span>
+                        <span class="nav-item-text">Smart Summarizer</span>
+                        <span class="nav-item-badge">NEW</span>
+                    </a>
+                    <a class="nav-item" data-panel="lecture-notes">
+                        <span class="nav-item-icon">📓</span>
+                        <span class="nav-item-text">Lecture Notes</span>
+                        <span class="nav-item-badge">NEW</span>
+                    </a>
+                    <a class="nav-item" data-panel="ai-tutor">
+                        <span class="nav-item-icon">🎓</span>
+                        <span class="nav-item-text">AI Tutor</span>
+                        <span class="nav-item-badge">NEW</span>
+                    </a>
                 </div>
 
                 <div class="nav-section">
@@ -81,6 +101,13 @@
                     <div class="page-subtitle" id="pageSubtitle">Convert research, notes and manuscripts into complete teaching material: slides, lessons, and video-ready outputs</div>
                 </div>
                 <div class="top-bar-actions">
+                    <a href="{{ url_for('select_mode') }}" class="btn-change-mode">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                        </svg>
+                        Change Mode
+                    </a>
                     <a href="{{ url_for('home') }}" class="btn-back-home">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"/>
@@ -94,6 +121,7 @@
             <!-- Content Area -->
             <div class="content-panel">
                 <div style="flex: 1;">
+
                 <!-- PDF to PPT Panel -->
                 <div class="panel-section active" id="panel-pdf-to-ppt">
                     <form id="uploadFormPdfToPpt" enctype="multipart/form-data">
@@ -1023,6 +1051,258 @@
                     </div>
                 </div>
 
+                <!-- Smart Summarizer Panel -->
+                <div class="panel-section" id="panel-smart-summarizer">
+                    <!-- Upload state -->
+                    <div class="form-card" id="ss-upload-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">📝 Smart Summarizer</h3>
+                            <p class="form-card-description">Upload a document and get a structured summary — key concepts, arguments, and takeaways.</p>
+                        </div>
+                        <div class="file-upload-area" id="ssDropZone">
+                            <div class="file-upload-icon">📁</div>
+                            <div class="file-upload-text">Drop your file here or click to browse</div>
+                            <div class="file-upload-hint">Supported: PDF, DOCX, PPTX, TEX</div>
+                            <input type="file" id="ssFileInput" accept=".pdf,.docx,.pptx,.tex" style="display:none;">
+                        </div>
+                        <div id="ssFileInfo" class="file-selected" style="display:none;">
+                            <div class="file-selected-icon">✅</div>
+                            <div class="file-selected-info">
+                                <div class="file-selected-name" id="ssFileName"></div>
+                                <div class="file-selected-size" id="ssFileSize"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:16px;margin-bottom:0;">
+                            <label class="form-label">🌐 Summary Language</label>
+                            <select class="form-select" id="ssLanguage">
+                                <option value="en">English</option>
+                                <option value="ar">العربية (Arabic)</option>
+                                <option value="fr">Français (French)</option>
+                                <option value="de">Deutsch (German)</option>
+                                <option value="es">Español (Spanish)</option>
+                                <option value="zh">中文 (Chinese)</option>
+                                <option value="tr">Türkçe (Turkish)</option>
+                                <option value="ur">اردو (Urdu)</option>
+                                <option value="it">Italiano (Italian)</option>
+                                <option value="pt">Português (Portuguese)</option>
+                                <option value="ru">Русский (Russian)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="ssGenerateBtn" onclick="smartSummarizer.start()" style="margin-top:16px;">
+                            ✨ Summarize Document
+                        </button>
+                    </div>
+
+                    <!-- Generating state -->
+                    <div class="form-card" id="ss-generating-card" style="display:none;">
+                        <div style="text-align:center;padding:32px 0;">
+                            <div class="ft-spinner"></div>
+                            <div class="ft-status-title" id="ssStatusTitle">Summarising your document…</div>
+                            <div class="ft-status-sub">This usually takes 10–20 seconds</div>
+                        </div>
+                    </div>
+
+                    <!-- Results state -->
+                    <div id="ss-results-card" style="display:none;">
+                        <div class="ss-results-header">
+                            <div>
+                                <div class="ss-doc-title" id="ssDocTitle"></div>
+                                <div class="ss-doc-sub">Smart Summary</div>
+                            </div>
+                            <div style="display:flex;gap:10px;flex-shrink:0;">
+                                <button class="btn-secondary" onclick="smartSummarizer.copy()" id="ssCopyBtn">📋 Copy</button>
+                                <button class="btn-secondary" onclick="smartSummarizer.downloadDocx()" id="ssDocxBtn">⬇️ Download DOCX</button>
+                                <button class="btn-secondary" onclick="smartSummarizer.reset()">New Document</button>
+                            </div>
+                        </div>
+
+                        <div class="ss-overview-box" id="ssOverview"></div>
+
+                        <div class="ss-grid">
+                            <div class="ss-section">
+                                <div class="ss-section-title">🔑 Key Concepts</div>
+                                <div id="ssKeyConcepts"></div>
+                            </div>
+                            <div class="ss-section">
+                                <div class="ss-section-title">💡 Main Arguments</div>
+                                <ul class="ss-list" id="ssMainArguments"></ul>
+                            </div>
+                        </div>
+
+                        <div class="ss-section" style="margin-top:16px;">
+                            <div class="ss-section-title">✅ Key Takeaways</div>
+                            <div class="ss-takeaways" id="ssTakeaways"></div>
+                        </div>
+                    </div>
+                </div><!-- /#panel-smart-summarizer -->
+
+                <!-- Assessment Panel -->
+                <div class="panel-section" id="panel-assessment">
+                    <div class="form-card" id="asm-upload-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">🧪 Assessment</h3>
+                            <p class="form-card-description">Upload a document to generate a full assessment — multiple choice, true/false, and flashcards. Score 70% or higher on the quiz to unlock a certificate.</p>
+                        </div>
+                        <div class="file-upload-area" id="asmDropZone">
+                            <div class="file-upload-icon">📁</div>
+                            <div class="file-upload-text">Drop your file here or click to browse</div>
+                            <div class="file-upload-hint">Supported: PDF, DOCX, PPTX, TEX</div>
+                            <input type="file" id="asmFileInput" accept=".pdf,.docx,.pptx,.tex" style="display:none;">
+                        </div>
+                        <div id="asmFileInfo" class="file-selected" style="display:none;">
+                            <div class="file-selected-icon">✅</div>
+                            <div class="file-selected-info">
+                                <div class="file-selected-name" id="asmFileName"></div>
+                                <div class="file-selected-size" id="asmFileSize"></div>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="asmGenerateBtn" onclick="assessmentBuilder.start()" style="margin-top:16px;">
+                            🧪 Generate Assessment
+                        </button>
+                    </div>
+
+                    <!-- Generating state -->
+                    <div class="form-card" id="asm-generating-card" style="display:none;">
+                        <div style="text-align:center;padding:32px 0;">
+                            <div class="ft-spinner"></div>
+                            <div class="ft-status-title" id="asmStatusTitle">Building your assessment…</div>
+                            <div class="ft-status-sub">Generating quiz questions, true/false statements, and flashcards</div>
+                        </div>
+                    </div>
+                </div><!-- /#panel-assessment -->
+
+                <!-- Lecture Notes Panel -->
+                <div class="panel-section" id="panel-lecture-notes">
+                    <!-- Upload state -->
+                    <div class="form-card" id="ln-upload-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">📓 Lecture Notes</h3>
+                            <p class="form-card-description">Upload a document and get clean, printable lecture notes — headings, key terms, and margin notes.</p>
+                        </div>
+                        <div class="file-upload-area" id="lnDropZone">
+                            <div class="file-upload-icon">📁</div>
+                            <div class="file-upload-text">Drop your file here or click to browse</div>
+                            <div class="file-upload-hint">Supported: PDF, DOCX, PPTX, TEX</div>
+                            <input type="file" id="lnFileInput" accept=".pdf,.docx,.pptx,.tex" style="display:none;">
+                        </div>
+                        <div id="lnFileInfo" class="file-selected" style="display:none;">
+                            <div class="file-selected-icon">✅</div>
+                            <div class="file-selected-info">
+                                <div class="file-selected-name" id="lnFileName"></div>
+                                <div class="file-selected-size" id="lnFileSize"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:16px;margin-bottom:0;">
+                            <label class="form-label">🌐 Notes Language</label>
+                            <select class="form-select" id="lnLanguage">
+                                <option value="en">English</option>
+                                <option value="ar">العربية (Arabic)</option>
+                                <option value="fr">Français (French)</option>
+                                <option value="de">Deutsch (German)</option>
+                                <option value="es">Español (Spanish)</option>
+                                <option value="zh">中文 (Chinese)</option>
+                                <option value="tr">Türkçe (Turkish)</option>
+                                <option value="ur">اردو (Urdu)</option>
+                                <option value="it">Italiano (Italian)</option>
+                                <option value="pt">Português (Portuguese)</option>
+                                <option value="ru">Русский (Russian)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="lnGenerateBtn" onclick="lectureNotes.start()" style="margin-top:16px;">
+                            📓 Generate Lecture Notes
+                        </button>
+                    </div>
+
+                    <!-- Generating state -->
+                    <div class="form-card" id="ln-generating-card" style="display:none;">
+                        <div style="text-align:center;padding:32px 0;">
+                            <div class="ft-spinner"></div>
+                            <div class="ft-status-title" id="lnStatusTitle">Writing your lecture notes…</div>
+                            <div class="ft-status-sub">This usually takes 15–25 seconds</div>
+                        </div>
+                    </div>
+
+                    <!-- Results state -->
+                    <div id="ln-results-card" style="display:none;">
+                        <div class="ss-results-header">
+                            <div>
+                                <div class="ss-doc-title" id="lnDocTitle"></div>
+                                <div class="ss-doc-sub">Lecture Notes</div>
+                            </div>
+                            <div style="display:flex;gap:10px;flex-shrink:0;">
+                                <button class="btn-secondary" onclick="window.print()">🖨️ Print / Save PDF</button>
+                                <button class="btn-secondary" onclick="lectureNotes.downloadDocx()" id="lnDocxBtn">⬇️ Download DOCX</button>
+                                <button class="btn-secondary" onclick="lectureNotes.reset()">New Document</button>
+                            </div>
+                        </div>
+
+                        <div id="lnSections"></div>
+
+                        <div class="ln-summary-box" id="lnSummaryBox">
+                            <div class="ss-section-title">✅ Summary Points</div>
+                            <div id="lnSummaryPoints"></div>
+                        </div>
+                    </div>
+                </div><!-- /#panel-lecture-notes -->
+
+                <!-- AI Tutor Panel -->
+                <div class="panel-section" id="panel-ai-tutor">
+                    <!-- Upload state -->
+                    <div class="form-card" id="at-upload-card">
+                        <div class="form-card-header">
+                            <h3 class="form-card-title">🎓 AI Tutor</h3>
+                            <p class="form-card-description">Upload a document and ask questions about it — your personal AI teaching assistant, available anytime.</p>
+                        </div>
+                        <div class="file-upload-area" id="atDropZone">
+                            <div class="file-upload-icon">📁</div>
+                            <div class="file-upload-text">Drop your file here or click to browse</div>
+                            <div class="file-upload-hint">Supported: PDF, DOCX, PPTX, TEX</div>
+                            <input type="file" id="atFileInput" accept=".pdf,.docx,.pptx,.tex" style="display:none;">
+                        </div>
+                        <div id="atFileInfo" class="file-selected" style="display:none;">
+                            <div class="file-selected-icon">✅</div>
+                            <div class="file-selected-info">
+                                <div class="file-selected-name" id="atFileName"></div>
+                                <div class="file-selected-size" id="atFileSize"></div>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="atStartBtn" onclick="aiTutor.start()" style="margin-top:16px;">
+                            🎓 Start Tutoring Session
+                        </button>
+                    </div>
+
+                    <!-- Preparing state -->
+                    <div class="form-card" id="at-preparing-card" style="display:none;">
+                        <div style="text-align:center;padding:32px 0;">
+                            <div class="ft-spinner"></div>
+                            <div class="ft-status-title">Reading your document…</div>
+                            <div class="ft-status-sub">Preparing your tutor session</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat state -->
+                    <div id="at-chat-card" style="display:none;">
+                        <div class="at-chat-header">
+                            <div>
+                                <div class="at-chat-title" id="atDocTitle"></div>
+                                <div class="at-chat-sub">AI Tutor Session</div>
+                            </div>
+                            <button class="btn-secondary" onclick="aiTutor.reset()">New Document</button>
+                        </div>
+
+                        <div class="at-chat-window" id="atChatWindow"></div>
+
+                        <div class="at-suggested" id="atSuggested"></div>
+
+                        <div class="at-input-row">
+                            <textarea class="at-input" id="atInput" placeholder="Ask a question about your document…" rows="1"></textarea>
+                            <button class="at-send-btn" id="atSendBtn" onclick="aiTutor.send()" aria-label="Send">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div><!-- /#panel-ai-tutor -->
+
                 <!-- Help Panel -->
                 <div class="panel-section" id="panel-help">
                     <div class="form-card">
@@ -1207,6 +1487,7 @@
             </div>
             <div class="assessment-tabs" id="assessmentTabs">
                 <button class="assessment-tab active" data-tab="quiz" onclick="assessmentUI.switchTab('quiz')">📝 Quiz</button>
+                <button class="assessment-tab" data-tab="truefalse" onclick="assessmentUI.switchTab('truefalse')">🔴 True/False</button>
                 <button class="assessment-tab" data-tab="flashcards" onclick="assessmentUI.switchTab('flashcards')">🃏 Flashcards</button>
             </div>
             <div class="assessment-tab-divider"></div>
@@ -1214,10 +1495,12 @@
                 <div class="assessment-loading" id="assessmentLoading">
                     <div class="assessment-spinner"></div>
                     <div class="assessment-loading-text">Generating assessment...</div>
-                    <div class="assessment-loading-sub">AI is reading your slides and creating questions</div>
+                    <div class="assessment-loading-sub">AI is reading your document and creating questions</div>
                 </div>
                 <!-- Quiz pane -->
                 <div class="assessment-pane active" id="quizPane" style="display:none"></div>
+                <!-- True/False pane -->
+                <div class="assessment-pane" id="truefalsePane" style="display:none"></div>
                 <!-- Flashcards pane -->
                 <div class="assessment-pane" id="flashcardsPane" style="display:none"></div>
             </div>
@@ -1362,5 +1645,9 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='js/assessment-builder.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/smart-summarizer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lecture-notes.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ai-tutor.js') }}"></script>
 </body>
 </html>

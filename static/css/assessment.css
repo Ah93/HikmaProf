@@ -238,6 +238,9 @@
 }
 .option-btn:disabled { cursor: default; }
 
+.tf-options { display: flex; gap: 12px; }
+.tf-btn { flex: 1; justify-content: center; font-weight: 700; font-size: 15px; }
+
 /* ── Explanation ──────────────────────────────────────────────────── */
 .explanation-box {
     margin-top: 16px;
@@ -645,4 +648,59 @@
     .print-option { margin: 3px 0; font-size: 13px; }
     .print-answer { color: green; font-weight: bold; font-size: 12px; }
     .print-flashcard { margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+}
+
+/* ── Certificate ──────────────────────────────────────────────────── */
+.btn-certificate {
+    padding: 10px 24px;
+    border-radius: 10px;
+    background: rgba(192,154,69,0.16);
+    border: 1.5px solid rgba(192,154,69,0.5);
+    color: #e6c87a;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-certificate:hover { background: rgba(192,154,69,0.28); }
+.btn-certificate:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cert-locked-hint {
+    margin-top: 16px;
+    font-size: 12.5px;
+    color: #888;
+}
+
+.certificate-form {
+    margin: 22px auto 0;
+    max-width: 440px;
+    padding: 18px 20px;
+    background: rgba(192,154,69,0.07);
+    border: 1px solid rgba(192,154,69,0.25);
+    border-radius: 12px;
+    text-align: left;
+}
+.certificate-form-label {
+    display: block;
+    font-size: 12.5px;
+    color: #c7b48a;
+    margin-bottom: 10px;
+}
+.certificate-form-row {
+    display: flex;
+    gap: 10px;
+}
+.certificate-form-input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    font-size: 14px;
+}
+.certificate-form-input:focus {
+    outline: none;
+    border-color: rgba(192,154,69,0.6);
+}
 }

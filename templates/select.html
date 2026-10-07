@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIKMAProf — Choose Your Mode</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #0d1b3e 0%, #1D2D5C 55%, #0f2a2a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 24px 56px;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(42,173,166,.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(42,173,166,.06) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+        }
+
+        /* ── Logo & heading ── */
+        .page-logo { margin-bottom: 32px; text-align: center; }
+        .page-logo img { height: 68px; width: auto; }
+
+        .page-heading { text-align: center; margin-bottom: 44px; }
+        .page-heading h1 {
+            font-size: 28px; font-weight: 700; color: #ffffff;
+            letter-spacing: -0.4px; margin-bottom: 8px;
+        }
+        .page-heading p { font-size: 15px; color: rgba(255,255,255,0.50); }
+
+        /* ── Section label ── */
+        .section-label {
+            width: 100%;
+            max-width: 1020px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .section-label span {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .section-label--active span { color: #2AADA6; }
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+        }
+        .section-label--active::after { background: rgba(42,173,166,0.25); }
+
+        /* ── Grids ── */
+        .cards-grid {
+            display: grid;
+            gap: 22px;
+            width: 100%;
+            max-width: 1020px;
+            margin-bottom: 40px;
+        }
+        .cards-grid--active { grid-template-columns: repeat(3, 1fr); }
+        .cards-grid--soon   { grid-template-columns: repeat(3, 1fr); }
+
+        /* ── Base card ── */
+        .mode-card {
+            border-radius: 18px;
+            padding: 28px 24px 22px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Active card */
+        .mode-card--active {
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid rgba(255,255,255,0.10);
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease,
+                        border-color 0.2s ease, background 0.2s ease;
+        }
+        .mode-card--active:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 18px 44px rgba(0,0,0,0.38);
+            border-color: rgba(42,173,166,0.5);
+            background: rgba(255,255,255,0.07);
+        }
+        .mode-card--active:active { transform: translateY(-2px); }
+
+        /* Coming-soon card */
+        .mode-card--soon {
+            background: rgba(255,255,255,0.02);
+            border: 1.5px dashed rgba(255,255,255,0.10);
+            cursor: default;
+            opacity: 0.72;
+        }
+
+        /* ── Icon bubble ── */
+        .card-icon {
+            width: 56px; height: 56px; border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 18px; flex-shrink: 0;
+        }
+        /* Active colours */
+        .ci--blue   { background: rgba(59,130,246,.18);  color: #93c5fd; }
+        .ci--purple { background: rgba(139,92,246,.18);  color: #c4b5fd; }
+        .ci--green  { background: rgba(16,185,129,.18);  color: #6ee7b7; }
+        /* Coming-soon colours */
+        .ci--amber  { background: rgba(245,158,11,.15);  color: #fcd34d; }
+        .ci--gold   { background: rgba(192,154,69,.15);  color: #e6c87a; }
+        .ci--indigo { background: rgba(99,102,241,.15);  color: #a5b4fc; }
+        .ci--rose   { background: rgba(244,63,94,.15);   color: #fda4af; }
+        .ci--cyan   { background: rgba(6,182,212,.15);   color: #67e8f9; }
+
+        /* ── Card text ── */
+        .card-title {
+            font-size: 17px; font-weight: 700; color: #ffffff; margin-bottom: 8px;
+        }
+        .card-desc {
+            font-size: 13px; color: rgba(255,255,255,0.50);
+            line-height: 1.65; margin-bottom: 18px; flex: 1;
+        }
+        .card-features {
+            list-style: none; margin-bottom: 20px;
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .card-features li {
+            font-size: 12px; color: rgba(255,255,255,0.45);
+            padding-left: 17px; position: relative;
+        }
+        .card-features li::before {
+            content: '✓'; position: absolute; left: 0;
+            color: #2AADA6; font-weight: 700; font-size: 10px; top: 1px;
+        }
+
+        /* ── Card footer ── */
+        .card-footer {
+            margin-top: auto; padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .card-cta-label {
+            font-size: 13px; font-weight: 600; color: #2AADA6;
+            display: flex; align-items: center; gap: 6px; transition: gap 0.15s;
+        }
+        .mode-card--active:hover .card-cta-label { gap: 10px; }
+
+        /* Badges */
+        .badge {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+            padding: 3px 8px; border-radius: 20px;
+        }
+        .badge--new  { background: #2AADA6; color: white; }
+        .badge--soon {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.4);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+
+        /* ── Bottom hint ── */
+        .page-hint {
+            margin-top: 8px; font-size: 13px;
+            color: rgba(255,255,255,0.28); text-align: center;
+        }
+        .page-hint a { color: rgba(42,173,166,0.65); text-decoration: none; }
+        .page-hint a:hover { color: #2AADA6; }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .cards-grid--active,
+            .cards-grid--soon { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 560px) {
+            .cards-grid--active,
+            .cards-grid--soon { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-logo">
+        <img src="{{ url_for('static', filename='logo/logo_hikmaprof_wht.png') }}" alt="HIKMAProf">
+    </div>
+
+    <div class="page-heading">
+        <h1>What would you like to create?</h1>
+        <p>Choose a mode — you can switch anytime.</p>
+    </div>
+
+    <!-- ── Available Now ── -->
+    <div class="section-label section-label--active">
+        <span>Available Now</span>
+    </div>
+
+    <div class="cards-grid cards-grid--active">
+
+        <!-- AI Course Studio -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=pdf-to-ppt">
+            <div class="card-icon ci--blue">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+            </div>
+            <div class="card-title">AI Course Studio</div>
+            <p class="card-desc">Upload a document and generate a complete set of slides, quizzes, and flashcards — ready to teach from.</p>
+            <ul class="card-features">
+                <li>AI-generated slide decks</li>
+                <li>Quizzes &amp; flashcards</li>
+                <li>18 design templates · 11 languages</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Open Studio
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+            </div>
+        </a>
+
+        <!-- Video Presenter -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=avatar-video">
+            <div class="card-icon ci--purple">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="23 7 16 12 23 17 23 7"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+            </div>
+            <div class="card-title">Video Presenter</div>
+            <p class="card-desc">Turn your document into a narrated video with an AI avatar, voice cloning, or simple narration.</p>
+            <ul class="card-features">
+                <li>AI avatar overlay</li>
+                <li>Edge TTS &amp; XTTS v2 voice cloning</li>
+                <li>MP4 export</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Open Video
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+            </div>
+        </a>
+
+        <!-- Podcast Generator -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=podcast">
+            <div class="card-icon ci--green">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </div>
+            <div class="card-title">Podcast Generator</div>
+            <p class="card-desc">Convert any document into a natural, multi-speaker audio podcast — great for on-the-go learning.</p>
+            <ul class="card-features">
+                <li>AI script · Multi-speaker dialogue</li>
+                <li>Customisable length</li>
+                <li>MP3 download</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Open Podcast
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+                <span class="badge badge--new">NEW</span>
+            </div>
+        </a>
+
+    </div>
+
+    <div class="cards-grid cards-grid--soon">
+
+        <!-- AI Tutor -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=ai-tutor">
+            <div class="card-icon ci--amber">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M8 14s-4 1-4 4v1h16v-1c0-3-4-4-4-4"/>
+                    <path d="M15 11c1.5.5 3 2 3 4"/>
+                </svg>
+            </div>
+            <div class="card-title">AI Tutor</div>
+            <p class="card-desc">Ask questions about your course content and get instant AI-powered answers — like a personal teaching assistant.</p>
+            <ul class="card-features">
+                <li>Chat with your document</li>
+                <li>Concept explanations</li>
+                <li>Grounded, honest answers</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Start Chatting
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+                <span class="badge badge--new">NEW</span>
+            </div>
+        </a>
+
+        <!-- Assessment -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=assessment">
+            <div class="card-icon ci--gold">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+            </div>
+            <div class="card-title">Assessment</div>
+            <p class="card-desc">Upload a document and test your understanding — multiple choice, true/false, and flashcards, all in one. Score 70%+ to unlock a certificate.</p>
+            <ul class="card-features">
+                <li>Multiple choice &amp; true/false quiz</li>
+                <li>Flip-card flashcards</li>
+                <li>Certificate at 70%+ with your name</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Open Assessment
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+                <span class="badge badge--new">NEW</span>
+            </div>
+        </a>
+
+        <!-- Smart Summarizer -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=smart-summarizer">
+            <div class="card-icon ci--rose">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="21" y1="10" x2="3" y2="10"/>
+                    <line x1="21" y1="6"  x2="3" y2="6"/>
+                    <line x1="21" y1="14" x2="3" y2="14"/>
+                    <line x1="14" y1="18" x2="3" y2="18"/>
+                </svg>
+            </div>
+            <div class="card-title">Smart Summarizer</div>
+            <p class="card-desc">Get a structured summary of any document in seconds — key concepts, main arguments, and bullet-point takeaways.</p>
+            <ul class="card-features">
+                <li>Key concepts extraction</li>
+                <li>Structured bullet summary</li>
+                <li>11 languages supported</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Open Summarizer
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+                <span class="badge badge--new">NEW</span>
+            </div>
+        </a>
+
+        <!-- Lecture Notes -->
+        <a class="mode-card mode-card--active" href="{{ url_for('app_interface') }}?mode=lecture-notes">
+            <div class="card-icon ci--cyan">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+            </div>
+            <div class="card-title">Lecture Notes</div>
+            <p class="card-desc">Generate clean, printable lecture notes from your document — formatted with headings, key terms, and margin notes.</p>
+            <ul class="card-features">
+                <li>Professor-ready handout format</li>
+                <li>Key terms highlighted</li>
+                <li>PDF &amp; DOCX export</li>
+            </ul>
+            <div class="card-footer">
+                <span class="card-cta-label">Open Notes
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+                <span class="badge badge--new">NEW</span>
+            </div>
+        </a>
+
+    </div>
+
+    <p class="page-hint">← <a href="{{ url_for('home') }}">Back to home</a></p>
+
+</body>
+</html>
