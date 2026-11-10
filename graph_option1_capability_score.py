@@ -23,17 +23,17 @@ matplotlib.rcParams.update({
 })
 
 PLATFORMS = [
-    'NotebookLM',
     'Beautiful.ai',
     'Presentations.AI',
-    'Kimi Slides',
     'Gamma',
+    'Kimi Slides',
+    'NotebookLM',
     'Canva AI',
     'HikmaProf',
 ]
-FULL    = np.array([3, 4, 4, 4, 4,  5, 10], dtype=float)
-PARTIAL = np.array([1, 0, 0, 1, 1,  0,  0], dtype=float)
-NONE    = np.array([6, 6, 6, 5, 5,  5,  0], dtype=float)
+FULL    = np.array([3, 3, 3, 3, 4,  4, 10], dtype=float)
+PARTIAL = np.array([0, 0, 1, 2, 2,  3,  0], dtype=float)
+NONE    = np.array([7, 7, 6, 5, 4,  3,  0], dtype=float)
 
 TOTAL_FEATURES = 10
 

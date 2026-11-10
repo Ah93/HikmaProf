@@ -430,7 +430,7 @@ class PresentationPipeline {
       console.log('\n🧠 Stage 2: Analyzing content and planning slides...');
       const targetSlides = this.config.numSlides || 12;
       console.log(`   Target: ${targetSlides} slides`);
-      this.writeProgress('analyzing', 40, 'AI Analysis', `Claude AI planning ${targetSlides} slides`);
+      this.writeProgress('analyzing', 40, 'AI Analysis', `DeepSeek AI planning ${targetSlides} slides`);
       slidePlan = await this.contentAnalyzer.analyze(documentContent, { numSlides: targetSlides, language: this.config.language || 'en' });
       console.log(`   ✓ Generated ${slidePlan.slides.length} slides`);
 
